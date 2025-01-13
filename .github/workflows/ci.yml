@@ -30,10 +30,24 @@ jobs:
                   password: ${{ secrets.PASSWORD }}
                   port: ${{ secrets.PORT }}
                   script: |
-                      cd /home/ubuntu/weekly-streaming &&
-                      git checkout dev &&           # Переключиться на ветку dev
-                      git pull &&                   # Забрать последние изменения
-                      cd .. &&                      # Вернуться на уровень выше
-                      docker-compose down &&        # Остановить текущие контейнеры
-                      docker-compose build &&       # Пересобрать контейнеры
-                      docker-compose up -d         # Запустить контейнеры в фоновом режиме
+                      cd /home/ubuntu/weekly-streaming
+
+                      echo "🔄 Переключение на ветку dev и обновление репозитория"
+                      git checkout dev
+                      git pull
+
+                      echo "🛑 Остановка и удаление контейнеров"
+                      docker rm -f $(docker ps -aq) || true
+                      docker-compose down --volumes
+                      docker network prune -f
+
+                      echo "🛠 Пересборка контейнеров без кэша"
+                      docker-compose build --no-cache
+
+                      echo "🚀 Запуск контейнеров"
+                      docker-compose up -d --force-recreate
+
+                      echo "📝 Проверка запущенных контейнеров"
+                      docker ps -a
+
+                      echo "✅ Деплой завершен успешно!"
