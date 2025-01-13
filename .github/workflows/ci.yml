@@ -3,7 +3,7 @@ name: Remote SSH Command and CI Workflow
 on:
     push:
         branches:
-            - main # or your main branch
+            - main # или ваша основная ветка
     pull_request:
         branches:
             - main
@@ -22,18 +22,18 @@ jobs:
                   port: ${{ secrets.PORT }}
                   script: whoami
 
-            - name: Deploy to server using SSH with private key
-              uses: appleboy/ssh-action@master
+            - name: Deploy to server using SSH with password
+              uses: appleboy/ssh-action@v1.0.3
               with:
                   host: ${{ secrets.HOST }}
                   username: ${{ secrets.USERNAME }}
-                  key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  port: 22
+                  password: ${{ secrets.PASSWORD }}
+                  port: ${{ secrets.PORT }}
                   script: |
                       cd /home/ubuntu/weekly-streaming &&
-                      git checkout dev &&           # Switch to dev branch
-                      git pull &&                   # Pull the latest changes
-                      cd .. &&                      # Go up one directory
-                      docker-compose down &&        # Stop current containers
-                      docker-compose build &&       # Rebuild containers
-                      docker-compose up -d         # Start containers in detached mode
+                      git checkout dev &&           # Переключиться на ветку dev
+                      git pull &&                   # Забрать последние изменения
+                      cd .. &&                      # Вернуться на уровень выше
+                      docker-compose down &&        # Остановить текущие контейнеры
+                      docker-compose build &&       # Пересобрать контейнеры
+                      docker-compose up -d         # Запустить контейнеры в фоновом режиме
