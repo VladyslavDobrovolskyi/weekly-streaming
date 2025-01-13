@@ -15,7 +15,7 @@ jobs:
         steps:
             - name: Deploy to server
               if: github.ref == 'refs/heads/main' # Only on push to main branch
-              uses: webfactory/ssh-deploy-action@v0.5.1
+              uses: webfactory/ssh-agent@v0.9.0
               with:
                   host: ${{ secrets.HOST }}
                   username: ${{ secrets.USERNAME }}
