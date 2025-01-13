@@ -3,7 +3,7 @@ name: CI Workflow
 on:
     push:
         branches:
-            - main # or your main branch
+            - main # или ваша основная ветка
     pull_request:
         branches:
             - main
@@ -14,8 +14,8 @@ jobs:
 
         steps:
             - name: Deploy to server
-              if: github.ref == 'refs/heads/main' # Only on push to main branch
-              uses: webfactory/ssh-agent@v0.9.0
+              if: github.ref == 'refs/heads/main' # Только при пуше в main ветку
+              uses: appleboy/ssh-action@master
               with:
                   host: ${{ secrets.HOST }}
                   username: ${{ secrets.USERNAME }}
@@ -23,9 +23,9 @@ jobs:
                   port: 22
                   script: |
                       cd /home/ubuntu/weekly-streaming && 
-                      git checkout dev &&           # Switch to dev branch
-                      git pull &&                   # Pull the latest changes
-                      cd .. &&                      # Go up one directory
-                      docker-compose down &&        # Stop current containers
-                      docker-compose build &&       # Rebuild containers
-                      docker-compose up -d         # Start containers in detached mode
+                      git checkout dev &&           # Переключаемся на ветку dev
+                      git pull &&                   # Получаем последние изменения
+                      cd .. &&                      # Выходим на уровень выше
+                      docker-compose down &&        # Останавливаем текущие контейнеры
+                      docker-compose build &&       # Пересобираем контейнеры
+                      docker-compose up -d         # Запускаем контейнеры в фоновом режиме
