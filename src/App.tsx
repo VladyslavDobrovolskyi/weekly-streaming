@@ -3,22 +3,26 @@ import ReactPlayer from 'react-player'
 import Hls from 'hls.js'
 
 const App: React.FC = () => {
-	// Указываем тип на ReactPlayer с ссылкой на HTMLMediaElement
 	const playerRef = useRef<ReactPlayer>(null)
 
 	useEffect(() => {
-		// Проверяем, поддерживает ли браузер HLS
 		if (Hls.isSupported() && playerRef.current) {
-			const hls = new Hls()
-			// Получаем внутренний HTMLMediaElement
+			const hls = new Hls({
+				liveSyncDurationCount: 1, // Синхронизация с текущим моментом
+				maxLiveSyncPlaybackRate: 1.5, // Автокоррекция скорости для "живого" момента
+			})
+
 			const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
 
 			if (mediaElement) {
-				// Путь к .m3u8 файлу
 				hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
 				hls.attachMedia(mediaElement)
 
-				// Очистка ресурсов при размонтировании
+				// Событие для автоматического воспроизведения
+				hls.on(Hls.Events.MANIFEST_PARSED, () => {
+					mediaElement.play().catch(error => console.error('Playback error:', error))
+				})
+
 				return () => {
 					hls.destroy()
 				}
@@ -32,17 +36,20 @@ const App: React.FC = () => {
 			<ReactPlayer
 				ref={playerRef}
 				url='http://92.112.180.234/stream/playlist.m3u8'
+				playing={true}
 				controls={true}
+				muted={false}
+				loop={true} // Цикл воспроизведения (на случай прерывания)
 				width='100%'
 				height='auto'
-				playing
 				config={{
 					file: {
 						attributes: {
 							crossOrigin: 'anonymous',
 						},
 						hlsOptions: {
-							startLevel: -1,
+							liveSyncDurationCount: 1,
+							maxLiveSyncPlaybackRate: 1.5,
 						},
 					},
 				}}
