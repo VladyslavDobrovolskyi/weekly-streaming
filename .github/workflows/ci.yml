@@ -17,17 +17,22 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v2
 
-            # Шаг 5: (Опционально) Деплой на сервер
-            # Это пример для деплоя на сервер через SSH
-            # Необходимо добавить секреты SSH ключа в Settings > Secrets
+            # Шаг 2: Установка SSH клиента
+            - name: Set up SSH
+              uses: webfactory/ssh-agent@v0.5.3
+              with:
+                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+            # Шаг 3: Деплой на сервер
             - name: Deploy to server
               if: github.ref == 'refs/heads/main' # Только при пуше в main ветку
               run: |
-                  ssh -i ${{ secrets.SSH_PRIVATE_KEY }} robot@92.112.180.234"
+                  ssh -o StrictHostKeyChecking=no robot@92.112.180.234 << 'EOF'
                     cd /home/ubuntu/weekly-streaming && 
-                    git checkout dev &&       # Переключаемся на ветку dev
-                    git pull &&               # Получаем последние изменения
-                    cd .. &&                  # Выходим на уровень выше
-                    docker-compose down &&    # Останавливаем текущие контейнеры
-                    docker-compose build &&   # Пересобираем контейнеры
-                    docker-compose up -d"     # Запускаем контейнеры в фоновом режиме
+                    git checkout dev &&           # Переключаемся на ветку dev
+                    git pull &&                   # Получаем последние изменения
+                    cd .. &&                      # Выходим на уровень выше
+                    docker-compose down &&        # Останавливаем текущие контейнеры
+                    docker-compose build &&       # Пересобираем контейнеры
+                    docker-compose up -d         # Запускаем контейнеры в фоновом режиме
+                  EOF
