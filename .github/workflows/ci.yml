@@ -1,4 +1,4 @@
-name: CI Workflow
+name: Remote SSH Command and CI Workflow
 
 on:
     push:
@@ -10,10 +10,19 @@ on:
 
 jobs:
     build:
+        name: Build and Deploy
         runs-on: ubuntu-latest
-
         steps:
-            - name: Deploy to server
+            - name: Executing remote SSH commands using password
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.HOST }}
+                  username: ${{ secrets.USERNAME }}
+                  password: ${{ secrets.PASSWORD }}
+                  port: ${{ secrets.PORT }}
+                  script: whoami
+
+            - name: Deploy to server using SSH with private key
               uses: appleboy/ssh-action@master
               with:
                   host: ${{ secrets.HOST }}
