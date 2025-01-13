@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactPlayer from 'react-player'
-import styles from './VideoPlayer.module.css' // Импортируем CSS-модуль
+import styles from './VideoPlayer.module.css'
 
 interface VideoPlayerProps {
 	url: string
