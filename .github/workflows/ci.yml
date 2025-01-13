@@ -13,11 +13,6 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            # Шаг 1: Проверка кода из репозитория
-            - name: Checkout code
-              uses: actions/checkout@v2
-
-            # Шаг 2: Деплой на сервер через SSH
             - name: Deploy to server
               if: github.ref == 'refs/heads/main' # Только при пуше в main ветку
               uses: appleboy/ssh-action@master
