@@ -28,7 +28,7 @@ const App: React.FC = () => {
 
 	return (
 		<div className='App'>
-			<h1>HLS Streaming Example</h1>
+			<h1>CI-CD TESTR</h1>
 			<ReactPlayer
 				ref={playerRef}
 				url='http://92.112.180.234/stream/playlist.m3u8'
