@@ -4,6 +4,7 @@ on:
     push:
         branches:
             - main # или ваша основная ветка
+            - dev
     pull_request:
         branches:
             - main
