@@ -15,7 +15,7 @@ const App: React.FC = () => {
 
 			if (mediaElement) {
 				// Путь к .m3u8 файлу
-				hls.loadSource('http://localhost:5555/stream/playlist.m3u8')
+				hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
 				hls.attachMedia(mediaElement)
 
 				// Очистка ресурсов при размонтировании
@@ -31,7 +31,7 @@ const App: React.FC = () => {
 			<h1>HLS Streaming Example</h1>
 			<ReactPlayer
 				ref={playerRef}
-				url='http://localhost:5555/stream/playlist.m3u8'
+				url='http://92.112.180.234/stream/playlist.m3u8'
 				controls={true}
 				width='100%'
 				height='auto'

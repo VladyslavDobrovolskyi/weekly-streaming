@@ -11,10 +11,11 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 // Настроим CORS
-app.use(cors({ origin: 'http://localhost:7777' })) // Разрешаем доступ со всех источников
-
+app.use(cors({
+  origin: 'http://92.112.180.234',  // Замените на ваш домен
+}));
 // Статический сервер для отдачи файлов HLS
-app.use('/stream', express.static(path.join(__dirname, '../stream')))
+app.use('/stream', express.static('../stream'))
 
 // Запуск сервера
 app.listen(port, () => {
