@@ -1,30 +1,53 @@
-name: CI Workflow
+name: Remote SSH Command and CI Workflow
 
 on:
     push:
         branches:
-            - main # or your main branch
+            - main # или ваша основная ветка
     pull_request:
         branches:
             - main
 
 jobs:
     build:
+        name: Build and Deploy
         runs-on: ubuntu-latest
-
         steps:
-            - name: Deploy to server
-              uses: appleboy/ssh-action@master
+            - name: Executing remote SSH commands using password
+              uses: appleboy/ssh-action@v1.0.3
               with:
                   host: ${{ secrets.HOST }}
                   username: ${{ secrets.USERNAME }}
-                  key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  port: 22
+                  password: ${{ secrets.PASSWORD }}
+                  port: ${{ secrets.PORT }}
+                  script: whoami
+
+            - name: Deploy to server using SSH with password
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.HOST }}
+                  username: ${{ secrets.USERNAME }}
+                  password: ${{ secrets.PASSWORD }}
+                  port: ${{ secrets.PORT }}
                   script: |
-                      cd /home/ubuntu/weekly-streaming &&
-                      git checkout dev &&           # Switch to dev branch
-                      git pull &&                   # Pull the latest changes
-                      cd .. &&                      # Go up one directory
-                      docker-compose down &&        # Stop current containers
-                      docker-compose build &&       # Rebuild containers
-                      docker-compose up -d         # Start containers in detached mode
+                      cd /home/ubuntu/weekly-streaming
+
+                      echo "🔄 Переключение на ветку dev и обновление репозитория"
+                      git checkout dev
+                      git pull
+
+                      echo "🛑 Остановка и удаление контейнеров"
+                      docker rm -f $(docker ps -aq) || true
+                      docker-compose down --volumes
+                      docker network prune -f
+
+                      echo "🛠 Пересборка контейнеров без кэша"
+                      docker-compose build --no-cache
+
+                      echo "🚀 Запуск контейнеров"
+                      docker-compose up -d --force-recreate
+
+                      echo "📝 Проверка запущенных контейнеров"
+                      docker ps -a
+
+                      echo "✅ Деплой завершен успешно!"
