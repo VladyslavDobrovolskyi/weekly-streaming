@@ -8,8 +8,9 @@ const App: React.FC = () => {
 	useEffect(() => {
 		if (Hls.isSupported() && playerRef.current) {
 			const hls = new Hls({
-				liveSyncDurationCount: 1, // Синхронизация с текущим моментом
-				maxLiveSyncPlaybackRate: 1.5, // Автокоррекция скорости для "живого" момента
+				liveSyncDurationCount: 1,
+				lowLatencyMode: true,
+				maxLiveSyncPlaybackRate: 1.5,
 			})
 
 			const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
@@ -18,28 +19,25 @@ const App: React.FC = () => {
 				hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
 				hls.attachMedia(mediaElement)
 
-				// Событие для автоматического воспроизведения
 				hls.on(Hls.Events.MANIFEST_PARSED, () => {
 					mediaElement.play().catch(error => console.error('Playback error:', error))
 				})
 
-				return () => {
-					hls.destroy()
-				}
+				return () => hls.destroy()
 			}
 		}
 	}, [])
 
 	return (
 		<div className='App'>
-			<h1>CI-CD TESTER</h1>
+			<h1>Live Stream</h1>
 			<ReactPlayer
 				ref={playerRef}
 				url='http://92.112.180.234/stream/playlist.m3u8'
 				playing={true}
 				controls={true}
 				muted={false}
-				loop={true} // Цикл воспроизведения (на случай прерывания)
+				loop={true}
 				width='100%'
 				height='auto'
 				config={{
@@ -49,6 +47,7 @@ const App: React.FC = () => {
 						},
 						hlsOptions: {
 							liveSyncDurationCount: 1,
+							lowLatencyMode: true,
 							maxLiveSyncPlaybackRate: 1.5,
 						},
 					},
