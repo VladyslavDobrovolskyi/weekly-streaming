@@ -30,7 +30,7 @@ const App: React.FC = () => {
 
 	return (
 		<div className='App'>
-			<h1>Live Stream</h1>
+			<h1>Live Stream!!!</h1>
 			<ReactPlayer
 				ref={playerRef}
 				url='http://92.112.180.234/stream/playlist.m3u8'
