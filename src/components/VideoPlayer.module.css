@@ -13,14 +13,14 @@
 	border-radius: 8px; /* Скругление углов для плеера */
 }
 
-.react-player .controls .time {
+.reactPlayer .controls .time {
 	display: none !important;
 }
 
-.react-player .controls .progress-bar {
+.reactPlayer .controls .progress-bar {
 	display: none !important;
 }
 
-.react-player .controls .seekbar {
+.reactPlayer .controls .seekbar {
 	display: none !important;
 }

@@ -9,7 +9,13 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ url }) => {
 	return (
 		<div className={styles.videoPlayer}>
-			<ReactPlayer className={styles.reactPlayer} url={url} controls={true} width='100%' height='auto' />
+			<ReactPlayer
+				className={styles.reactPlayer}
+				url={url}
+				controls={false} // Отключаем элементы управления
+				width='100%'
+				height='auto'
+			/>
 		</div>
 	)
 }
