@@ -48,7 +48,7 @@ const App: React.FC = () => {
 						hlsOptions: {
 							liveSyncDurationCount: 1,
 							lowLatencyMode: true,
-							maxLiveSyncPlaybackRate: 1.5,
+							maxLiveSyncPlaybackRate: 1,
 						},
 					},
 				}}
