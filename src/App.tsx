@@ -23,6 +23,8 @@ const App: React.FC = () => {
 					mediaElement.play().catch(error => console.error('Playback error:', error))
 				})
 
+				mediaElement.play().catch(error => console.error('Autoplay error:', error))
+
 				return () => hls.destroy()
 			}
 		}
