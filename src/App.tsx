@@ -49,6 +49,7 @@ const App: React.FC = () => {
 							liveSyncDurationCount: 1,
 							lowLatencyMode: true,
 							maxLiveSyncPlaybackRate: 1,
+							startPosition: -1,
 						},
 					},
 				}}
