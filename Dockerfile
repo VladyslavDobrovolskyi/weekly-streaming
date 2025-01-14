@@ -18,4 +18,4 @@ EXPOSE 5555
 EXPOSE 7777
 
 # Запускаем оба процесса
-CMD ["sh", "-c", "npm run dev & npm run server"]
+CMD ["sh", "-c", "npm run dev"]
