@@ -3,7 +3,7 @@ import userRoutes from './routes/userRoutes'
 import roomReservationsRoutes from './routes/roomRoutes'
 
 const app = express()
-const port = 3000
+const port = 8888
 
 app.use(express.json())
 

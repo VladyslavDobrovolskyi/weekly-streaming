@@ -14,8 +14,8 @@ RUN npm install
 COPY . .
 
 # Открываем порты, на которых приложение будет работать
-EXPOSE 5555
+EXPOSE 8888
 EXPOSE 7777
 
-# Запускаем оба процесса
-CMD ["sh", "-c", "npm run dev"]
+# Запускаем оба процесса, один в фоне
+CMD sh -c "npm run dev & npm run server"
