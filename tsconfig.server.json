@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "ESNext", // Для новейших возможностей JavaScript
-		"module": "ESNext", // Используем ES-модули
+		"module": "CommonJS", // Use CommonJS for compatibility with Node.js
 		"moduleResolution": "Node", // Разрешение модулей как в Node.js
 		"esModuleInterop": true, // Для совместимости с CommonJS и ES-модулями
 		"skipLibCheck": true, // Пропуск проверки типов в библиотеках

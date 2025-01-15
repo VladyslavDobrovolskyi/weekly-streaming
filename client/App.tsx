@@ -41,8 +41,7 @@ const App: React.FC = () => {
 							mediaElement.play().catch(error => console.error('Playback error:', error))
 							setIsPlaying(true)
 						})
-						//@ts-expect-error event warning
-						hls.on(Hls.Events.ERROR, (event, data) => {
+						hls.on(Hls.Events.ERROR, (_, data) => {
 							if (data.response && data.response.code === 404) {
 								setError('Stream will be available at 8 PM')
 							}
