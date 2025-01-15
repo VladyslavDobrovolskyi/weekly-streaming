@@ -15,7 +15,7 @@ class Database {
 				host: 'postgres-db',
 				database: 'streamingdb',
 				password: 'dbstreaming',
-				port: 5621,
+				port: 5432,
 			})
 		}
 		return Database.instance
