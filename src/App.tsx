@@ -37,7 +37,7 @@ const App: React.FC = () => {
 				ref={playerRef}
 				url='http://92.112.180.234/stream/playlist.m3u8'
 				playing={true}
-				controls={true}
+				controls={false}
 				muted={false}
 				loop={true}
 				width='100%'
