@@ -9,33 +9,51 @@ const App: React.FC = () => {
 	const [error, setError] = useState<string | null>(null)
 
 	useEffect(() => {
-		if (Hls.isSupported() && playerRef.current) {
-			const hls = new Hls({
-				liveSyncDurationCount: 1,
-				lowLatencyMode: true,
-				maxLiveSyncPlaybackRate: 1.5,
-			})
-
-			const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
-
-			if (mediaElement) {
-				hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
-				hls.attachMedia(mediaElement)
-				hls.on(Hls.Events.MANIFEST_PARSED, () => {
-					mediaElement.play().catch(error => console.error('Playback error:', error))
-					setIsPlaying(true)
-				})
-
-				//@ts-expect-error - event not used
-				hls.on(Hls.Events.ERROR, (event, data) => {
-					if (data.response && data.response.code === 404) {
+		const checkStreamAvailability = async () => {
+			try {
+				const response = await fetch('http://92.112.180.234/stream/playlist.m3u8')
+				if (!response.ok) {
+					if (response.status === 404) {
 						setError('Stream will be available at 8 PM')
+					} else {
+						setError('An error occurred while fetching the stream')
 					}
-				})
+					return
+				}
 
-				return () => hls.destroy()
+				if (Hls.isSupported() && playerRef.current) {
+					const hls = new Hls({
+						liveSyncDurationCount: 1,
+						lowLatencyMode: true,
+						maxLiveSyncPlaybackRate: 1.5,
+					})
+
+					const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
+
+					if (mediaElement) {
+						hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
+						hls.attachMedia(mediaElement)
+						hls.on(Hls.Events.MANIFEST_PARSED, () => {
+							mediaElement.play().catch(error => console.error('Playback error:', error))
+							setIsPlaying(true)
+						})
+						//@ts-expect-error event warning
+						hls.on(Hls.Events.ERROR, (event, data) => {
+							if (data.response && data.response.code === 404) {
+								setError('Stream will be available at 8 PM')
+							}
+						})
+
+						return () => hls.destroy()
+					}
+				}
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			} catch (error) {
+				setError('An error occurred while fetching the stream')
 			}
 		}
+
+		checkStreamAvailability()
 	}, [])
 
 	const handlePlayPause = () => {
