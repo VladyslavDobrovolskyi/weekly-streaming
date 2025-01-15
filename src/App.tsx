@@ -4,7 +4,7 @@ import Hls from 'hls.js'
 
 const App: React.FC = () => {
 	const playerRef = useRef<ReactPlayer>(null)
-	const [isPlaying, setIsPlaying] = useState(false)
+	const [isPlaying, setIsPlaying] = useState(true)
 	const [isMuted, setIsMuted] = useState(false)
 
 	useEffect(() => {
