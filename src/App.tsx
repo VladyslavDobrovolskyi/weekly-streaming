@@ -86,6 +86,26 @@ const App: React.FC = () => {
 		}
 	}
 
+	const testGetUsers = async () => {
+		try {
+			const response = await fetch('http://92.112.180.234/api/users')
+			const data = await response.json()
+			console.log('Users:', data)
+		} catch (error) {
+			console.error('Error fetching users:', error)
+		}
+	}
+
+	const testGetRooms = async () => {
+		try {
+			const response = await fetch('http://92.112.180.234/api/room_reservations')
+			const data = await response.json()
+			console.log('Room Reservations:', data)
+		} catch (error) {
+			console.error('Error fetching room reservations:', error)
+		}
+	}
+
 	if (error) {
 		return (
 			<div className='App'>
@@ -131,6 +151,14 @@ const App: React.FC = () => {
 					style={{ padding: '10px 20px', fontSize: '16px', marginLeft: '10px' }}
 				>
 					{isMuted ? 'Unmute' : 'Mute'}
+				</button>
+			</div>
+			<div style={{ marginTop: '20px' }}>
+				<button onClick={testGetUsers} style={{ padding: '10px 20px', fontSize: '16px' }}>
+					Test Get Users
+				</button>
+				<button onClick={testGetRooms} style={{ padding: '10px 20px', fontSize: '16px', marginLeft: '10px' }}>
+					Test Get Room Reservations
 				</button>
 			</div>
 		</div>
