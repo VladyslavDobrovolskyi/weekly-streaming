@@ -7,6 +7,7 @@ const App: React.FC = () => {
 	const [isPlaying, setIsPlaying] = useState(true)
 	const [isMuted, setIsMuted] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const hlsRef = useRef<Hls | null>(null)
 
 	useEffect(() => {
 		const checkStreamAvailability = async () => {
@@ -26,9 +27,10 @@ const App: React.FC = () => {
 						liveSyncDurationCount: 1,
 						lowLatencyMode: true,
 						maxLiveSyncPlaybackRate: 1,
-						enableWorker: false,
+						enableWorker: true,
 						liveBackBufferLength: 0,
 					})
+					hlsRef.current = hls
 
 					const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
 
@@ -62,9 +64,15 @@ const App: React.FC = () => {
 		if (playerRef.current) {
 			const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
 			if (mediaElement.paused) {
+				if (hlsRef.current) {
+					hlsRef.current.startLoad(-1) // Загрузить последний сегмент
+				}
 				mediaElement.play().catch(error => console.error('Play error:', error))
 				setIsPlaying(true)
 			} else {
+				if (hlsRef.current) {
+					hlsRef.current.stopLoad() // Остановить загрузку сегментов
+				}
 				mediaElement.pause()
 				setIsPlaying(false)
 			}
