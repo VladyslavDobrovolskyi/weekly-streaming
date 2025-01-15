@@ -31,9 +31,13 @@ jobs:
                   password: ${{ secrets.PASSWORD }}
                   port: ${{ secrets.PORT }}
                   script: |
-                      cd /home/ubuntu/weekly-streaming
+                      cd /home/ubuntu/
+                    
+                      echo "🔄 Cтягиваем код с github"
+                      git clone git@github.com:VladyslavDobrovolskyi/weekly-streaming.git
 
                       echo "🔄 Переключение на ветку dev и обновление репозитория"
+                      cd weekly-streaming
                       git checkout dev
                       git pull
 
