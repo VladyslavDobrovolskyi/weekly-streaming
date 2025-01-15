@@ -25,7 +25,9 @@ const App: React.FC = () => {
 					const hls = new Hls({
 						liveSyncDurationCount: 1,
 						lowLatencyMode: true,
-						maxLiveSyncPlaybackRate: 1.5,
+						maxLiveSyncPlaybackRate: 1,
+						enableWorker: false,
+						liveBackBufferLength: 0,
 					})
 
 					const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
@@ -106,6 +108,8 @@ const App: React.FC = () => {
 							liveSyncDurationCount: 1,
 							lowLatencyMode: true,
 							maxLiveSyncPlaybackRate: 1,
+							enableWorker: true,
+							liveBackBufferLength: 0,
 							startPosition: -1,
 						},
 					},
