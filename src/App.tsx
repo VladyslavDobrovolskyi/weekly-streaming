@@ -6,6 +6,7 @@ const App: React.FC = () => {
 	const playerRef = useRef<ReactPlayer>(null)
 	const [isPlaying, setIsPlaying] = useState(true)
 	const [isMuted, setIsMuted] = useState(false)
+	const [error, setError] = useState<string | null>(null)
 
 	useEffect(() => {
 		if (Hls.isSupported() && playerRef.current) {
@@ -23,6 +24,13 @@ const App: React.FC = () => {
 				hls.on(Hls.Events.MANIFEST_PARSED, () => {
 					mediaElement.play().catch(error => console.error('Playback error:', error))
 					setIsPlaying(true)
+				})
+
+				//@ts-expect-error - event not used
+				hls.on(Hls.Events.ERROR, (event, data) => {
+					if (data.response && data.response.code === 404) {
+						setError('Stream will be available at 8 PM')
+					}
 				})
 
 				return () => hls.destroy()
@@ -49,6 +57,14 @@ const App: React.FC = () => {
 			mediaElement.muted = !mediaElement.muted
 			setIsMuted(mediaElement.muted)
 		}
+	}
+
+	if (error) {
+		return (
+			<div className='App'>
+				<h1>{error}</h1>
+			</div>
+		)
 	}
 
 	return (
