@@ -5,6 +5,7 @@ import Hls from 'hls.js'
 const App: React.FC = () => {
 	const playerRef = useRef<ReactPlayer>(null)
 	const [isPlaying, setIsPlaying] = useState(false)
+	const [isMuted, setIsMuted] = useState(false)
 
 	useEffect(() => {
 		if (Hls.isSupported() && playerRef.current) {
@@ -19,7 +20,6 @@ const App: React.FC = () => {
 			if (mediaElement) {
 				hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
 				hls.attachMedia(mediaElement)
-
 				hls.on(Hls.Events.MANIFEST_PARSED, () => {
 					mediaElement.play().catch(error => console.error('Playback error:', error))
 					setIsPlaying(true)
@@ -43,6 +43,14 @@ const App: React.FC = () => {
 		}
 	}
 
+	const handleMuteUnmute = () => {
+		if (playerRef.current) {
+			const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
+			mediaElement.muted = !mediaElement.muted
+			setIsMuted(mediaElement.muted)
+		}
+	}
+
 	return (
 		<div className='App'>
 			<h1>Live Stream!!!</h1>
@@ -51,7 +59,7 @@ const App: React.FC = () => {
 				url='http://92.112.180.234/stream/playlist.m3u8'
 				playing={isPlaying}
 				controls={false}
-				muted={false}
+				muted={isMuted}
 				loop={true}
 				width='100%'
 				height='auto'
@@ -72,6 +80,12 @@ const App: React.FC = () => {
 			<div style={{ marginTop: '10px' }}>
 				<button onClick={handlePlayPause} style={{ padding: '10px 20px', fontSize: '16px' }}>
 					{isPlaying ? 'Pause' : 'Play'}
+				</button>
+				<button
+					onClick={handleMuteUnmute}
+					style={{ padding: '10px 20px', fontSize: '16px', marginLeft: '10px' }}
+				>
+					{isMuted ? 'Unmute' : 'Mute'}
 				</button>
 			</div>
 		</div>
