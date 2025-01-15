@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import ReactPlayer from 'react-player'
 import Hls from 'hls.js'
 
 const App: React.FC = () => {
 	const playerRef = useRef<ReactPlayer>(null)
+	const [isPlaying, setIsPlaying] = useState(false)
 
 	useEffect(() => {
 		if (Hls.isSupported() && playerRef.current) {
@@ -21,14 +22,26 @@ const App: React.FC = () => {
 
 				hls.on(Hls.Events.MANIFEST_PARSED, () => {
 					mediaElement.play().catch(error => console.error('Playback error:', error))
+					setIsPlaying(true)
 				})
-
-				mediaElement.play().catch(error => console.error('Autoplay error:', error))
 
 				return () => hls.destroy()
 			}
 		}
 	}, [])
+
+	const handlePlayPause = () => {
+		if (playerRef.current) {
+			const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
+			if (mediaElement.paused) {
+				mediaElement.play().catch(error => console.error('Play error:', error))
+				setIsPlaying(true)
+			} else {
+				mediaElement.pause()
+				setIsPlaying(false)
+			}
+		}
+	}
 
 	return (
 		<div className='App'>
@@ -36,8 +49,8 @@ const App: React.FC = () => {
 			<ReactPlayer
 				ref={playerRef}
 				url='http://92.112.180.234/stream/playlist.m3u8'
-				playing={true}
-				controls={true}
+				playing={isPlaying}
+				controls={false}
 				muted={false}
 				loop={true}
 				width='100%'
@@ -56,6 +69,11 @@ const App: React.FC = () => {
 					},
 				}}
 			/>
+			<div style={{ marginTop: '10px' }}>
+				<button onClick={handlePlayPause} style={{ padding: '10px 20px', fontSize: '16px' }}>
+					{isPlaying ? 'Pause' : 'Play'}
+				</button>
+			</div>
 		</div>
 	)
 }
