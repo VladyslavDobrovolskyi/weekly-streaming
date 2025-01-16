@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { getAllUsers, getUserById, createUser, updateUser, deleteUser } from '../services/userService'
+import { getRoomByUserId, getUsersInRoom } from '../services/roomService'
 
 export const getAllUsersHandler = async (req: Request, res: Response) => {
 	try {
@@ -49,6 +50,21 @@ export const deleteUserHandler = async (req: Request, res: Response) => {
 	try {
 		await deleteUser(Number(id))
 		res.status(200).json({ message: 'User deleted successfully' })
+	} catch (err) {
+		res.status(500).json({ error: err.message })
+	}
+}
+
+export const getRoomByUserIdHandler = async (req: Request, res: Response) => {
+	//@ts-expect-error ts-typnyak
+	const userId = req.user.id // Assuming req.user is set by authMiddleware
+	try {
+		const room = await getRoomByUserId(userId)
+		if (!room) {
+			return res.status(404).json({ message: 'Room not found' })
+		}
+		const users = await getUsersInRoom(room.room_id)
+		res.json({ room, users })
 	} catch (err) {
 		res.status(500).json({ error: err.message })
 	}

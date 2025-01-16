@@ -27,48 +27,21 @@ const Room: React.FC = () => {
 		const fetchRoomData = async () => {
 			try {
 				const token = localStorage.getItem('token')
-				const response = await fetch('http://92.112.180.234/api/room_reservations', {
+				const response = await fetch('http://92.112.180.234/api/rooms/user', {
 					headers: {
 						Authorization: `Bearer ${token}`,
 					},
 				})
 				const data = await response.json()
-				console.log(data)
 				if (response.ok) {
-					const userRoom = data.find((room: RoomData) => room.user_id === token)
-					console.log('token', token)
-					console.log('data', data) // Assuming token contains user_id
-					if (userRoom) {
-						setRoomData(userRoom)
-						fetchUsersInRoom(userRoom.room_id)
-						setupWebRTC(userRoom.room_id)
-					} else {
-						setError('You are not in any room')
-					}
+					setRoomData(data.room)
+					setUsers(data.users)
+					setupWebRTC(data.room.room_id)
 				} else {
 					setError('Failed to fetch room data')
 				}
 			} catch (error) {
 				setError('An error occurred while fetching room data')
-			}
-		}
-
-		const fetchUsersInRoom = async (roomId: string) => {
-			try {
-				const token = localStorage.getItem('token')
-				const response = await fetch(`http://92.112.180.234/api/rooms/${roomId}/users`, {
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				})
-				const data = await response.json()
-				if (response.ok) {
-					setUsers(data)
-				} else {
-					setError('Failed to fetch users in room')
-				}
-			} catch (error) {
-				setError('An error occurred while fetching users in room')
 			}
 		}
 
@@ -138,8 +111,7 @@ const Room: React.FC = () => {
 				}
 			}
 
-			//@ts-expect-error ts-typnyak
-			peerConnection.ontrack = event => {
+			peerConnection.ontrack = _event => {
 				// Handle remote stream
 			}
 

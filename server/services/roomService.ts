@@ -40,3 +40,7 @@ export const getUsersInRoom = async (roomId: string) => {
 	)
 	return result.rows
 }
+export const getRoomByUserId = async (userId: number) => {
+	const result = await db.query('SELECT room_id FROM room_reservations WHERE user_id = $1', [userId])
+	return result.rows[0]
+}
