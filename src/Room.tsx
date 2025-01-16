@@ -35,7 +35,9 @@ const Room: React.FC = () => {
 				const data = await response.json()
 				console.log(data)
 				if (response.ok) {
-					const userRoom = data.find((room: RoomData) => room.user_id === token) // Assuming token contains user_id
+					const userRoom = data.find((room: RoomData) => room.user_id === token)
+					console.log('token', token)
+					console.log('data', data) // Assuming token contains user_id
 					if (userRoom) {
 						setRoomData(userRoom)
 						fetchUsersInRoom(userRoom.room_id)
@@ -75,7 +77,7 @@ const Room: React.FC = () => {
 				const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				localStreamRef.current = localStream
 
-				signalingSocketRef.current = new WebSocket('ws://localhost:8080')
+				signalingSocketRef.current = new WebSocket('ws://92.112.180.234/ws')
 				signalingSocketRef.current.onmessage = message => {
 					const data = JSON.parse(message.data)
 					handleSignalingData(data)
