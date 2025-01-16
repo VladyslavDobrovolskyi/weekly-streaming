@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 import { getUserByUsername } from '../services/userService.ts'
 
 const router = express.Router()
-const secretKey = 'your_secret_key' // Use a secure key in production
+const secretKey = 'SM!@#^SECR*@#&18ET_-(JK_eY' // Use a secure key in production
 
 //@ts-expect-error ts-typnyak
 router.post('/login', async (req, res) => {
