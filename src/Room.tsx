@@ -27,11 +27,14 @@ const Room: React.FC = () => {
 		const fetchRoomData = async () => {
 			try {
 				const token = localStorage.getItem('token')
-				const response = await fetch('https://streaming.vladyslavdobrovolskyi.tech/api/rooms/user', {
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				})
+				const response = await fetch(
+					'https://streaming.vladyslavdobrovolskyi.tech/api/room_reservations/user',
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				)
 				const data = await response.json()
 				if (response.ok) {
 					setRoomData(data.room)
