@@ -19,4 +19,4 @@ EXPOSE 7777
 EXPOSE 8080
 
 # Запускаем оба процесса, один в фоне
-CMD sh -c "npm run dev & npm run server"
+CMD sh -c "npm run dev & npm run api-server & npm run webrtc-server"
