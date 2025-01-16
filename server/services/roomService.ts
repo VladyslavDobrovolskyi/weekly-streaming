@@ -32,3 +32,11 @@ export const deleteRoomReservation = async (room_id: number, user_id: number) =>
 	await db.query('DELETE FROM room_reservations WHERE room_id = $1 AND user_id = $2', [room_id, user_id])
 	await db.query('UPDATE rooms SET available_seats = available_seats + 1 WHERE id = $1', [room_id])
 }
+
+export const getUsersInRoom = async (roomId: string) => {
+	const result = await db.query(
+		'SELECT users.id, users.username, users.email FROM users JOIN room_reservations ON users.id = room_reservations.user_id WHERE room_reservations.room_id = $1',
+		[roomId]
+	)
+	return result.rows
+}
