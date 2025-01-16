@@ -6,14 +6,21 @@ import {
 	updateUserHandler,
 	deleteUserHandler,
 } from '../controllers/userController'
+import { authMiddleware } from '../middlware/authMiddleware.ts'
 
 const router = Router()
-
-router.get('/', getAllUsersHandler)
 //@ts-expect-error ts-typnyak
-router.get('/:id', getUserByIdHandler)
-router.post('/', createUserHandler)
-router.put('/:id', updateUserHandler)
-router.delete('/:id', deleteUserHandler)
+router.get('/', authMiddleware, getAllUsersHandler)
+//@ts-expect-error ts-typnyak
+router.get('/:id', authMiddleware, getUserByIdHandler)
+//@ts-expect-error ts-typnyak
+
+router.post('/', authMiddleware, createUserHandler)
+//@ts-expect-error ts-typnyak
+
+router.put('/:id', authMiddleware, updateUserHandler)
+//@ts-expect-error ts-typnyak
+
+router.delete('/:id', authMiddleware, deleteUserHandler)
 
 export default router

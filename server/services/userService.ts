@@ -10,6 +10,11 @@ export const getUserById = async (id: number) => {
 	return result.rows[0]
 }
 
+export const getUserByUsername = async (username: string) => {
+	const result = await db.query('SELECT * FROM users WHERE username = $1', [username])
+	return result.rows[0]
+}
+
 export const createUser = async (username: string, password: string, email: string) => {
 	await db.query('INSERT INTO users (username, password, email) VALUES ($1, $2, $3)', [username, password, email])
 }
