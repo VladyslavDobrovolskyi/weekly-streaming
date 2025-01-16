@@ -27,7 +27,7 @@ const Room: React.FC = () => {
 		const fetchRoomData = async () => {
 			try {
 				const token = localStorage.getItem('token')
-				const response = await fetch('http://92.112.180.234/api/room_reservations/user', {
+				const response = await fetch('https://streaming.vladyslavdobrovolskyi.tech/api/rooms/user', {
 					headers: {
 						Authorization: `Bearer ${token}`,
 					},
@@ -36,7 +36,6 @@ const Room: React.FC = () => {
 				if (response.ok) {
 					setRoomData(data.room)
 					setUsers(data.users)
-					console.log('Room data:', data.room)
 					setupWebRTC(data.room.room_id)
 				} else {
 					setError('Failed to fetch room data')
@@ -48,14 +47,22 @@ const Room: React.FC = () => {
 
 		const setupWebRTC = async (roomId: string) => {
 			try {
-				const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-				localStreamRef.current = localStream
+				if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+					throw new Error('WebRTC is not supported in this browser')
+				}
 
-				signalingSocketRef.current = new WebSocket('ws://92.112.180.234/ws')
+				const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+
+				localStreamRef.current = localStream
+				console.log('Local stream created')
+				signalingSocketRef.current = new WebSocket('ws://streaming.vladyslavdobrovolskyi.tech/ws')
+
+				console.log('Signaling socket created')
 				signalingSocketRef.current.onmessage = message => {
 					const data = JSON.parse(message.data)
 					handleSignalingData(data)
 				}
+				console.log('Signaling socket message handler set')
 
 				signalingSocketRef.current.onopen = () => {
 					signalingSocketRef.current?.send(JSON.stringify({ type: 'join', roomId }))

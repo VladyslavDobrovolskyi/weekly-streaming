@@ -22,7 +22,7 @@ const App: React.FC = () => {
 
 	const checkStreamAvailability = async () => {
 		try {
-			const response = await fetch('http://92.112.180.234/stream/playlist.m3u8')
+			const response = await fetch('https://streaming.vladyslavdobrovolskyi.tech/stream/playlist.m3u8')
 			if (!response.ok) {
 				if (response.status === 404) {
 					setError('Stream will be available at 8 PM')
@@ -45,7 +45,7 @@ const App: React.FC = () => {
 				const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
 
 				if (mediaElement) {
-					hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
+					hls.loadSource('https://streaming.vladyslavdobrovolskyi.tech/stream/playlist.m3u8')
 					hls.attachMedia(mediaElement)
 					hls.on(Hls.Events.MANIFEST_PARSED, () => {
 						mediaElement.play().catch(error => console.error('Playback error:', error))
@@ -99,7 +99,7 @@ const App: React.FC = () => {
 	const testGetUsers = async () => {
 		try {
 			const token = localStorage.getItem('token')
-			const response = await fetch('http://92.112.180.234/api/users', {
+			const response = await fetch('https://streaming.vladyslavdobrovolskyi.tech/api/users', {
 				headers: {
 					Authorization: `Bearer ${token}`,
 				},
@@ -114,7 +114,7 @@ const App: React.FC = () => {
 	const testGetRooms = async () => {
 		try {
 			const token = localStorage.getItem('token')
-			const response = await fetch('http://92.112.180.234/api/room_reservations', {
+			const response = await fetch('https://streaming.vladyslavdobrovolskyi.tech/api/room_reservations', {
 				headers: {
 					Authorization: `Bearer ${token}`,
 				},
@@ -129,7 +129,7 @@ const App: React.FC = () => {
 	const checkRoom = async () => {
 		try {
 			const token = localStorage.getItem('token')
-			const response = await fetch('http://92.112.180.234/api/room_reservations', {
+			const response = await fetch('https://streaming.vladyslavdobrovolskyi.tech/api/room_reservations', {
 				headers: {
 					Authorization: `Bearer ${token}`,
 				},
@@ -167,7 +167,7 @@ const App: React.FC = () => {
 			<h1>Live Stream!!!</h1>
 			<ReactPlayer
 				ref={playerRef}
-				url='http://92.112.180.234/stream/playlist.m3u8'
+				url='https://streaming.vladyslavdobrovolskyi.tech/stream/playlist.m3u8'
 				playing={isPlaying}
 				controls={false}
 				muted={isMuted}
