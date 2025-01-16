@@ -27,7 +27,7 @@ const Room: React.FC = () => {
 		const fetchRoomData = async () => {
 			try {
 				const token = localStorage.getItem('token')
-				const response = await fetch('http://92.112.180.234/api/user', {
+				const response = await fetch('http://92.112.180.234/api/room_reservations/user', {
 					headers: {
 						Authorization: `Bearer ${token}`,
 					},
