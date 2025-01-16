@@ -36,6 +36,7 @@ const Room: React.FC = () => {
 				if (response.ok) {
 					setRoomData(data.room)
 					setUsers(data.users)
+					console.log('Room data:', data.room)
 					setupWebRTC(data.room.room_id)
 				} else {
 					setError('Failed to fetch room data')
@@ -60,7 +61,10 @@ const Room: React.FC = () => {
 					signalingSocketRef.current?.send(JSON.stringify({ type: 'join', roomId }))
 				}
 			} catch (error) {
-				setError('An error occurred while setting up WebRTC')
+				if (error instanceof Error) {
+					console.log('WEBRTC error:', error.message)
+					setError(error.message)
+				}
 			}
 		}
 
