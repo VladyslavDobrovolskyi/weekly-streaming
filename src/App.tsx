@@ -1,61 +1,71 @@
 import React, { useEffect, useRef, useState } from 'react'
 import ReactPlayer from 'react-player'
 import Hls from 'hls.js'
+import Login from './Login'
+import Room from './Room'
 
 const App: React.FC = () => {
 	const playerRef = useRef<ReactPlayer>(null)
 	const [isPlaying, setIsPlaying] = useState(true)
-	const [isMuted, setIsMuted] = useState(false)
+	const [isMuted, setIsMuted] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const hlsRef = useRef<Hls | null>(null)
+	const [isAuthenticated, setIsAuthenticated] = useState(false)
+	const [inRoom, setInRoom] = useState(false)
 
 	useEffect(() => {
-		const checkStreamAvailability = async () => {
-			try {
-				const response = await fetch('http://92.112.180.234/stream/playlist.m3u8')
-				if (!response.ok) {
-					if (response.status === 404) {
-						setError('Stream will be available at 8 PM')
-					} else {
-						setError('An error occurred while fetching the stream')
-					}
-					return
-				}
-
-				if (Hls.isSupported() && playerRef.current) {
-					const hls = new Hls({
-						liveSyncDurationCount: 1,
-						lowLatencyMode: true,
-						maxLiveSyncPlaybackRate: 1,
-						enableWorker: true,
-						liveBackBufferLength: 0,
-					})
-					hlsRef.current = hls
-
-					const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
-
-					if (mediaElement) {
-						hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
-						hls.attachMedia(mediaElement)
-						hls.on(Hls.Events.MANIFEST_PARSED, () => {
-							mediaElement.play().catch(error => console.error('Playback error:', error))
-							setIsPlaying(true)
-						})
-						hls.on(Hls.Events.ERROR, (_, data) => {
-							if (data.response && data.response.code === 404) {
-								setError('Stream will be available at 8 PM')
-							}
-						})
-
-						return () => hls.destroy()
-					}
-				}
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			} catch (error) {
-				setError('An error occurred while fetching the stream')
-			}
+		const token = localStorage.getItem('token')
+		if (token) {
+			setIsAuthenticated(true)
 		}
+	}, [])
 
+	const checkStreamAvailability = async () => {
+		try {
+			const response = await fetch('http://92.112.180.234/stream/playlist.m3u8')
+			if (!response.ok) {
+				if (response.status === 404) {
+					setError('Stream will be available at 8 PM')
+				} else {
+					setError('An error occurred while fetching the stream')
+				}
+				return
+			}
+
+			if (Hls.isSupported() && playerRef.current) {
+				const hls = new Hls({
+					liveSyncDurationCount: 1,
+					lowLatencyMode: true,
+					maxLiveSyncPlaybackRate: 1,
+					enableWorker: true,
+					liveBackBufferLength: 0,
+				})
+				hlsRef.current = hls
+
+				const mediaElement = playerRef.current.getInternalPlayer() as HTMLMediaElement
+
+				if (mediaElement) {
+					hls.loadSource('http://92.112.180.234/stream/playlist.m3u8')
+					hls.attachMedia(mediaElement)
+					hls.on(Hls.Events.MANIFEST_PARSED, () => {
+						mediaElement.play().catch(error => console.error('Playback error:', error))
+						setIsPlaying(true)
+					})
+					hls.on(Hls.Events.ERROR, (_, data) => {
+						if (data.response && data.response.code === 404) {
+							setError('Stream will be available at 8 PM')
+						}
+					})
+
+					return () => hls.destroy()
+				}
+			}
+		} catch {
+			setError('An error occurred while fetching the stream')
+		}
+	}
+
+	useEffect(() => {
 		checkStreamAvailability()
 	}, [])
 
@@ -88,7 +98,12 @@ const App: React.FC = () => {
 
 	const testGetUsers = async () => {
 		try {
-			const response = await fetch('http://92.112.180.234/api/users')
+			const token = localStorage.getItem('token')
+			const response = await fetch('http://92.112.180.234/api/users', {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			})
 			const data = await response.json()
 			console.log('Users:', data)
 		} catch (error) {
@@ -98,12 +113,45 @@ const App: React.FC = () => {
 
 	const testGetRooms = async () => {
 		try {
-			const response = await fetch('http://92.112.180.234/api/room_reservations')
+			const token = localStorage.getItem('token')
+			const response = await fetch('http://92.112.180.234/api/room_reservations', {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			})
 			const data = await response.json()
 			console.log('Room Reservations:', data)
 		} catch (error) {
 			console.error('Error fetching room reservations:', error)
 		}
+	}
+
+	const checkRoom = async () => {
+		try {
+			const token = localStorage.getItem('token')
+			const response = await fetch('http://92.112.180.234/api/room_reservations', {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			})
+			const data = await response.json()
+			if (response.ok && data.length > 0) {
+				setInRoom(true)
+			} else {
+				setError('You are not in any room')
+			}
+		} catch (error) {
+			console.error('Error checking room:', error)
+			setError('An error occurred while checking room')
+		}
+	}
+
+	if (!isAuthenticated) {
+		return <Login />
+	}
+
+	if (inRoom) {
+		return <Room />
 	}
 
 	if (error) {
@@ -159,6 +207,9 @@ const App: React.FC = () => {
 				</button>
 				<button onClick={testGetRooms} style={{ padding: '10px 20px', fontSize: '16px', marginLeft: '10px' }}>
 					Test Get Room Reservations
+				</button>
+				<button onClick={checkRoom} style={{ padding: '10px 20px', fontSize: '16px', marginLeft: '10px' }}>
+					Check Room
 				</button>
 			</div>
 		</div>
