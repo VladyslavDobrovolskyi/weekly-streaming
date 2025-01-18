@@ -139,13 +139,23 @@ const Room: React.FC = () => {
 	}, [roomData?.room_id])
 
 	const createOffer = async () => {
-		console.log('Create offer')
-		const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
-		if (!peerConnection) return
+		try {
+			console.log('Create offer')
+			const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
+			if (!peerConnection) {
+				console.warn('No peer connection found')
+				return
+			}
 
-		const offer = await peerConnection.createOffer()
-		await peerConnection.setLocalDescription(offer)
-		signalingSocketRef.current?.emit('signal', { room: roomData?.room_id, desc: offer })
+			const offer = await peerConnection.createOffer()
+			await peerConnection.setLocalDescription(offer)
+			console.log('Offer created and set as local description:', offer)
+
+			signalingSocketRef.current?.emit('signal', { room: roomData?.room_id, desc: offer })
+			console.log('Offer sent to signaling server')
+		} catch (error) {
+			console.error('Error creating offer:', error)
+		}
 	}
 	if (error) {
 		return <div>{error}</div>
