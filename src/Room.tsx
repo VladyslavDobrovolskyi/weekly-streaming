@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react'
-import io from 'socket.io-client'
 
 interface RoomData {
 	room_id: string
@@ -20,7 +19,7 @@ const Room: React.FC = () => {
 	const [error, setError] = useState<string | null>(null)
 	const localStreamRef = useRef<MediaStream | null>(null)
 	const peerConnectionsRef = useRef<{ [key: string]: RTCPeerConnection }>({})
-	const signalingSocketRef = useRef<ReturnType<typeof io> | null>(null)
+	const signalingSocketRef = useRef<WebSocket | null>(null)
 
 	useEffect(() => {
 		const fetchRoomData = async () => {
@@ -71,10 +70,14 @@ const Room: React.FC = () => {
 
 				peerConnection.onicecandidate = event => {
 					if (event.candidate) {
-						signalingSocketRef.current?.emit('signal', {
-							room: roomId,
-							desc: { type: 'candidate', candidate: event.candidate },
-						})
+						signalingSocketRef.current?.send(
+							JSON.stringify({
+								type: 'signal',
+								room: roomId,
+								desc: { type: 'candidate', candidate: event.candidate },
+							})
+						)
+						console.log('Sent candidate:', event.candidate)
 					}
 				}
 
@@ -88,15 +91,19 @@ const Room: React.FC = () => {
 
 				peerConnectionsRef.current[roomId] = peerConnection
 
-				signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/ws')
+				signalingSocketRef.current = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws')
 				console.log('Signaling socket created')
 
-				signalingSocketRef.current.on('desc', data => {
+				signalingSocketRef.current.onmessage = message => {
+					const data = JSON.parse(message.data)
 					handleSignalingData(data)
-				})
+				}
 				console.log('Signaling socket message handler set')
 
-				signalingSocketRef.current.emit('join', { roomId })
+				signalingSocketRef.current.onopen = () => {
+					signalingSocketRef.current?.send(JSON.stringify({ type: 'join', roomId }))
+					console.log('Join event emitted for room:', roomId)
+				}
 			} catch (error) {
 				if (error instanceof Error) {
 					console.log('WEBRTC error:', error.message)
@@ -106,31 +113,28 @@ const Room: React.FC = () => {
 		}
 
 		const handleSignalingData = async (data: {
-			desc: { type: RTCSdpType; sdp?: string; candidate?: RTCIceCandidateInit }
+			desc: RTCSessionDescriptionInit | { type: 'candidate'; candidate: RTCIceCandidateInit }
 		}) => {
 			const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
 			if (!peerConnection) return
 
 			switch (data.desc.type) {
-				case 'offer':
-					{
-						if (data.desc.sdp) {
-							await peerConnection.setRemoteDescription(
-								new RTCSessionDescription({ type: data.desc.type, sdp: data.desc.sdp })
-							)
-						}
-						const answer = await peerConnection.createAnswer()
-						await peerConnection.setLocalDescription(answer)
-						signalingSocketRef.current?.emit('signal', { room: roomData?.room_id, desc: answer })
-					}
+				case 'offer': {
+					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.desc))
+					const answer = await peerConnection.createAnswer()
+					await peerConnection.setLocalDescription(answer)
+					signalingSocketRef.current?.send(
+						JSON.stringify({ type: 'signal', room: roomData?.room_id, desc: answer })
+					)
 					break
+				}
 				case 'answer':
 					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.desc))
 					break
+				case 'candidate':
+					await peerConnection.addIceCandidate(new RTCIceCandidate(data.desc.candidate))
+					break
 				default:
-					if (data.desc.candidate) {
-						await peerConnection.addIceCandidate(new RTCIceCandidate(data.desc.candidate))
-					}
 					break
 			}
 		}
@@ -151,12 +155,13 @@ const Room: React.FC = () => {
 			await peerConnection.setLocalDescription(offer)
 			console.log('Offer created and set as local description:', offer)
 
-			signalingSocketRef.current?.emit('signal', { room: roomData?.room_id, desc: offer })
+			signalingSocketRef.current?.send(JSON.stringify({ type: 'signal', room: roomData?.room_id, desc: offer }))
 			console.log('Offer sent to signaling server')
 		} catch (error) {
 			console.error('Error creating offer:', error)
 		}
 	}
+
 	if (error) {
 		return <div>{error}</div>
 	}
@@ -178,8 +183,7 @@ const Room: React.FC = () => {
 					</li>
 				))}
 			</ul>
-			<button onClick={() => createOffer()}>Create Offer</button>
-			<button onClick={() => console.log('test')}>Create Offer</button>
+			<button onClick={createOffer}>Create Offer</button>
 		</div>
 	)
 }

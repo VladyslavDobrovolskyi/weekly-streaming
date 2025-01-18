@@ -1,66 +1,92 @@
-import { Server, Socket } from 'socket.io'
+import express, { Request, Response } from 'express'
 import http from 'http'
+import { WebSocketServer, WebSocket } from 'ws'
 import { validate, version } from 'uuid'
 
-const server = http.createServer()
-const io = new Server(server, {
-	cors: {
-		origin: '*',
-	},
-})
+const app = express()
+const server = http.createServer(app)
+const wss = new WebSocketServer({ server })
 
 const PORT = process.env.PORT || 9999
 
-interface CustomSocket extends Socket {
+interface CustomWebSocket extends WebSocket {
 	room?: string | null
 }
 
 function getClientRooms(): string[] {
-	const { rooms } = io.sockets.adapter
-	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
+	const rooms = new Set<string>()
+	wss.clients.forEach((client: CustomWebSocket) => {
+		if (client.room) {
+			rooms.add(client.room)
+		}
+	})
+	return Array.from(rooms).filter(roomID => validate(roomID) && version(roomID) === 4)
 }
 
 function shareRoomsInfo(): void {
-	io.emit('share-rooms', {
-		rooms: getClientRooms(),
+	const rooms = getClientRooms()
+	wss.clients.forEach(client => {
+		client.send(JSON.stringify({ type: 'share-rooms', rooms }))
 	})
 }
 
-io.on('connection', (socket: CustomSocket) => {
-	console.log('Client connected:', socket.id)
+wss.on('connection', (ws: CustomWebSocket) => {
+	console.log('Client connected')
 
 	shareRoomsInfo()
 
-	socket.on('join', (data: { roomId: string }) => {
-		socket.join(data.roomId)
-		socket.room = data.roomId
-		const sockets = io.of('/').adapter.rooms.get(data.roomId)
-		const numClients = sockets ? sockets.size : 0
+	ws.on('message', message => {
+		const data = JSON.parse(message.toString())
+		switch (data.type) {
+			case 'join': {
+				console.log('Received join request for room:', data.roomId)
+				ws.room = data.roomId
+				const clientsInRoom = Array.from(wss.clients).filter(
+					(client: CustomWebSocket) => client.room === data.roomId
+				)
 
-		if (numClients === 1) {
-			socket.emit('init')
-		} else if (numClients === 2) {
-			io.to(data.roomId).emit('ready')
-		} else {
-			socket.room = null
-			socket.leave(data.roomId)
-			socket.emit('full')
+				if (clientsInRoom.length === 1) {
+					ws.send(JSON.stringify({ type: 'init' }))
+				} else if (clientsInRoom.length === 2) {
+					clientsInRoom.forEach(client => {
+						client.send(JSON.stringify({ type: 'ready' }))
+					})
+				} else {
+					ws.room = null
+					ws.send(JSON.stringify({ type: 'full' }))
+				}
+				break
+			}
+			case 'signal':
+				console.log('Received signal:', data)
+				wss.clients.forEach((client: CustomWebSocket) => {
+					if (client.room === data.room) {
+						client.send(JSON.stringify({ type: 'desc', desc: data.desc }))
+					}
+				})
+				break
+			default:
+				break
 		}
 	})
 
-	socket.on('signal', (data: { room: string; desc: RTCSessionDescriptionInit | RTCIceCandidate }) => {
-		io.to(data.room).emit('desc', data.desc)
-	})
-
-	socket.on('disconnect', () => {
-		if (socket.room) {
-			io.to(socket.room).emit('disconnected')
+	ws.on('close', () => {
+		if (ws.room) {
+			wss.clients.forEach((client: CustomWebSocket) => {
+				if (client.room === ws.room) {
+					client.send(JSON.stringify({ type: 'disconnected' }))
+				}
+			})
 		}
 	})
 
-	socket.on('error', (error: Error) => {
-		console.error('Socket error:', error)
+	ws.on('error', error => {
+		console.error('WebSocket error:', error)
 	})
+})
+
+app.get('/', (req: Request, res: Response) => {
+	res.send('WebRTC signaling server is running')
 })
 
 server.listen(PORT, () => {
