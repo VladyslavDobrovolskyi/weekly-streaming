@@ -1,28 +1,32 @@
-import ws from 'ws'
+import { Server } from 'socket.io'
+import http from 'http'
 
-const wss = new ws.Server({ port: 9999 })
+const server = http.createServer()
+const io = new Server(server, {
+	cors: {
+		origin: '*',
+	},
+})
 
-wss.on('connection', ws => {
-	console.log('Client connected')
+io.on('connection', socket => {
+	console.log('Client connected:', socket.id)
 
-	ws.on('message', message => {
+	socket.on('message', message => {
 		console.log('Received message:', message)
 
-		// Broadcast the received message to all connected clients
-		wss.clients.forEach(client => {
-			if (client !== ws && client.readyState === ws.OPEN) {
-				client.send(message)
-			}
-		})
+		// Broadcast the received message to all connected clients except the sender
+		socket.broadcast.emit('message', message)
 	})
 
-	ws.on('close', () => {
-		console.log('Client disconnected')
+	socket.on('disconnect', () => {
+		console.log('Client disconnected:', socket.id)
 	})
 
-	ws.on('error', error => {
-		console.error('WebSocket error:', error)
+	socket.on('error', error => {
+		console.error('Socket error:', error)
 	})
 })
 
-console.log('WebRTC signaling server is running on ws://localhost:9999')
+server.listen(9999, () => {
+	console.log('WebRTC signaling server is running on :9999')
+})

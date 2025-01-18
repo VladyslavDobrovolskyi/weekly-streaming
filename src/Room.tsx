@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState, useRef } from 'react'
+import io from 'socket.io-client'
 
 interface RoomData {
 	room_id: string
@@ -21,12 +20,16 @@ const Room: React.FC = () => {
 	const [error, setError] = useState<string | null>(null)
 	const localStreamRef = useRef<MediaStream | null>(null)
 	const peerConnectionsRef = useRef<{ [key: string]: RTCPeerConnection }>({})
-	const signalingSocketRef = useRef<WebSocket | null>(null)
+	const signalingSocketRef = useRef<ReturnType<typeof io> | null>(null)
 
 	useEffect(() => {
 		const fetchRoomData = async () => {
 			try {
 				const token = localStorage.getItem('token')
+				if (!token) {
+					throw new Error('Token not found')
+				}
+
 				const response = await fetch(
 					'https://streaming.vladyslavdobrovolskyi.tech/api/room_reservations/user',
 					{
@@ -35,16 +38,20 @@ const Room: React.FC = () => {
 						},
 					}
 				)
-				const data = await response.json()
-				if (response.ok) {
-					setRoomData(data.room)
-					setUsers(data.users)
-					setupWebRTC(data.room.room_id)
-				} else {
-					setError('Failed to fetch room data')
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`)
 				}
+
+				const data = await response.json()
+				setRoomData(data.room)
+				setUsers(data.users)
+				setupWebRTC(data.room.room_id)
 			} catch (error) {
-				setError('An error occurred while fetching room data')
+				if (error instanceof Error) {
+					console.error('Error fetching room data:', error.message)
+					setError(error.message)
+				}
 			}
 		}
 
@@ -55,21 +62,38 @@ const Room: React.FC = () => {
 				}
 
 				const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-
 				localStreamRef.current = localStream
 				console.log('Local stream created')
-				signalingSocketRef.current = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws')
 
-				console.log('Signaling socket created')
-				signalingSocketRef.current.onmessage = message => {
-					const data = JSON.parse(message.data)
-					handleSignalingData(data)
+				const peerConnection = new RTCPeerConnection({
+					iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+				})
+
+				peerConnection.onicecandidate = event => {
+					if (event.candidate) {
+						signalingSocketRef.current?.emit('message', { type: 'candidate', candidate: event.candidate })
+					}
 				}
+
+				peerConnection.ontrack = () => {
+					// Handle remote stream
+				}
+
+				localStream.getTracks().forEach(track => {
+					peerConnection.addTrack(track, localStream)
+				})
+
+				peerConnectionsRef.current[roomId] = peerConnection
+
+				signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech:9999')
+				console.log('Signaling socket created')
+
+				signalingSocketRef.current.on('message', data => {
+					handleSignalingData(data)
+				})
 				console.log('Signaling socket message handler set')
 
-				signalingSocketRef.current.onopen = () => {
-					signalingSocketRef.current?.send(JSON.stringify({ type: 'join', roomId }))
-				}
+				signalingSocketRef.current.emit('message', { type: 'join', roomId })
 			} catch (error) {
 				if (error instanceof Error) {
 					console.log('WEBRTC error:', error.message)
@@ -78,67 +102,50 @@ const Room: React.FC = () => {
 			}
 		}
 
-		const handleSignalingData = async (data: any) => {
+		const handleSignalingData = async (data: {
+			type: string
+			offer?: RTCSessionDescriptionInit
+			answer?: RTCSessionDescriptionInit
+			candidate?: RTCIceCandidateInit
+		}) => {
+			const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
+			if (!peerConnection) return
+
 			switch (data.type) {
 				case 'offer':
-					await handleOffer(data.offer, data.sender)
+					{
+						if (data.offer) {
+							await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+						}
+						const answer = await peerConnection.createAnswer()
+						await peerConnection.setLocalDescription(answer)
+						signalingSocketRef.current?.emit('message', { type: 'answer', answer })
+					}
 					break
 				case 'answer':
-					await handleAnswer(data.answer, data.sender)
+					if (data.answer) {
+						await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
+					}
 					break
 				case 'candidate':
-					await handleCandidate(data.candidate, data.sender)
+					await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
 					break
 				default:
 					break
 			}
 		}
 
-		const handleOffer = async (offer: RTCSessionDescriptionInit, sender: string) => {
-			const peerConnection = createPeerConnection(sender)
-			await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-			const answer = await peerConnection.createAnswer()
-			await peerConnection.setLocalDescription(answer)
-			signalingSocketRef.current?.send(JSON.stringify({ type: 'answer', answer, sender }))
-		}
-
-		const handleAnswer = async (answer: RTCSessionDescriptionInit, sender: string) => {
-			const peerConnection = peerConnectionsRef.current[sender]
-			await peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
-		}
-
-		const handleCandidate = async (candidate: RTCIceCandidateInit, sender: string) => {
-			const peerConnection = peerConnectionsRef.current[sender]
-			await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-		}
-
-		const createPeerConnection = (userId: string) => {
-			const peerConnection = new RTCPeerConnection({
-				iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-			})
-
-			peerConnection.onicecandidate = event => {
-				if (event.candidate) {
-					signalingSocketRef.current?.send(
-						JSON.stringify({ type: 'candidate', candidate: event.candidate, sender: userId })
-					)
-				}
-			}
-
-			peerConnection.ontrack = _event => {
-				// Handle remote stream
-			}
-
-			localStreamRef.current?.getTracks().forEach(track => {
-				peerConnection.addTrack(track, localStreamRef.current!)
-			})
-
-			peerConnectionsRef.current[userId] = peerConnection
-			return peerConnection
-		}
-
 		fetchRoomData()
-	}, [])
+	}, [roomData?.room_id])
+
+	const createOffer = async () => {
+		const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
+		if (!peerConnection) return
+
+		const offer = await peerConnection.createOffer()
+		await peerConnection.setLocalDescription(offer)
+		signalingSocketRef.current?.emit('message', { type: 'offer', offer })
+	}
 
 	if (error) {
 		return <div>{error}</div>
@@ -161,6 +168,7 @@ const Room: React.FC = () => {
 					</li>
 				))}
 			</ul>
+			<button onClick={createOffer}>Create Offer</button>
 		</div>
 	)
 }
