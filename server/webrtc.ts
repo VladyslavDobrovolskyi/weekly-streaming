@@ -3,11 +3,17 @@ import ws from 'ws'
 const wss = new ws.Server({ port: 9999 })
 
 wss.on('connection', ws => {
+	console.log('Client connected')
+
 	ws.on('message', message => {
 		console.log('Received message:', message)
 
-		// Echo the received message back to the client
-		ws.send(message)
+		// Broadcast the received message to all connected clients
+		wss.clients.forEach(client => {
+			if (client !== ws && client.readyState === ws.OPEN) {
+				client.send(message)
+			}
+		})
 	})
 
 	ws.on('close', () => {

@@ -16,7 +16,14 @@ ws.on('open', function open() {
 })
 
 ws.on('message', function message(data) {
-	console.log('Received message from server:', data)
+	try {
+		const rawData = data
+		const parsedData = JSON.parse(rawData)
+		console.log('Received raw message from server:', rawData)
+		console.log('Received parsed message from server:', parsedData)
+	} catch (error) {
+		console.error('Error parsing message:', error)
+	}
 })
 
 ws.on('close', function close() {
