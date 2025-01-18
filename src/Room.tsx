@@ -139,6 +139,7 @@ const Room: React.FC = () => {
 	}, [roomData?.room_id])
 
 	const createOffer = async () => {
+		console.log('Create offer')
 		const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
 		if (!peerConnection) return
 
@@ -146,7 +147,6 @@ const Room: React.FC = () => {
 		await peerConnection.setLocalDescription(offer)
 		signalingSocketRef.current?.emit('signal', { room: roomData?.room_id, desc: offer })
 	}
-
 	if (error) {
 		return <div>{error}</div>
 	}
@@ -169,6 +169,7 @@ const Room: React.FC = () => {
 				))}
 			</ul>
 			<button onClick={() => createOffer()}>Create Offer</button>
+			<button onClick={() => console.log('test')}>Create Offer</button>
 		</div>
 	)
 }
