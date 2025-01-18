@@ -168,7 +168,7 @@ const Room: React.FC = () => {
 					</li>
 				))}
 			</ul>
-			<button onClick={createOffer}>Create Offer</button>
+			<button onClick={() => createOffer()}>Create Offer</button>
 		</div>
 	)
 }
