@@ -1,15 +1,15 @@
 import express, { Request, Response } from 'express'
 import http from 'http'
-import { WebSocketServer, WebSocket } from 'ws'
+import ws from 'ws'
 import { validate, version } from 'uuid'
 
 const app = express()
 const server = http.createServer(app)
-const wss = new WebSocketServer({ server })
+const wss = new ws.WebSocketServer({ server })
 
 const PORT = process.env.PORT || 9999
 
-interface CustomWebSocket extends WebSocket {
+interface CustomWebSocket extends ws.WebSocket {
 	room?: string | null
 }
 
