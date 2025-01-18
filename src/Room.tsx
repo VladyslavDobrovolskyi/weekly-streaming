@@ -20,7 +20,7 @@ const Room: React.FC = () => {
 	const [message, setMessage] = useState<string>('')
 
 	useEffect(() => {
-		const socket = io('http://streaming.vladyslavdobrovolskyi.tehc/socket.io')
+		const socket = io('https://streaming.vladyslavdobrovolskyi.tehc/socket.io')
 
 		socket.on('hello', arg => {
 			console.log(arg)
