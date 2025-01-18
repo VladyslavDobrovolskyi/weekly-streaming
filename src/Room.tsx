@@ -59,7 +59,7 @@ const Room: React.FC = () => {
 		const setupSocket = (roomId: string) => {
 			console.log('Setting up socket...')
 			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech', {
-				path: '/ws',
+				path: '/ws/',
 			})
 			console.log('Signaling socket created')
 

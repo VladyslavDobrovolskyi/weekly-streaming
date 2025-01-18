@@ -8,7 +8,7 @@ const io = new Server(server, {
 	cors: {
 		origin: '*',
 	},
-	path: '/ws', // Specify the path for WebSocket connections
+	// Specify the path for WebSocket connections
 })
 
 const PORT = process.env.PORT || 9999
@@ -29,10 +29,6 @@ io.on('connection', socket => {
 	socket.on('disconnect', () => {
 		console.log('Client disconnected:', socket.id)
 	})
-})
-
-app.get('/', (req, res) => {
-	res.send('WebRTC signaling server is running')
 })
 
 server.listen(PORT, () => {

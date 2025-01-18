@@ -1,6 +1,6 @@
 import WebSocket from 'ws'
 
-const socket = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws')
+const socket = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws/')
 
 socket.on('open', () => {
 	console.log('WebSocket connection established')
