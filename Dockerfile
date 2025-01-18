@@ -16,7 +16,7 @@ COPY . .
 # Открываем порты, на которых приложение будет работать
 EXPOSE 8888
 EXPOSE 7777
-EXPOSE 8080
+EXPOSE 9999
 
 # Запускаем оба процесса, один в фоне
 CMD sh -c "npm run dev & npm run api-server & npm run webrtc-server"
