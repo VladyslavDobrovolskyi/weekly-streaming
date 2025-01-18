@@ -29,3 +29,4 @@ io.on('connection', socket => {
 })
 
 httpServer.listen(9999)
+console.log('ws server listening on 9999')
