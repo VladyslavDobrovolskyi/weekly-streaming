@@ -85,7 +85,7 @@ const Room: React.FC = () => {
 
 				peerConnectionsRef.current[roomId] = peerConnection
 
-				signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech:9999')
+				signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/ws')
 				console.log('Signaling socket created')
 
 				signalingSocketRef.current.on('message', data => {
@@ -138,6 +138,14 @@ const Room: React.FC = () => {
 		fetchRoomData()
 	}, [roomData?.room_id])
 
+	if (error) {
+		return <div>{error}</div>
+	}
+
+	if (!roomData) {
+		return <div>Loading...</div>
+	}
+
 	const createOffer = async () => {
 		const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
 		if (!peerConnection) return
@@ -145,14 +153,6 @@ const Room: React.FC = () => {
 		const offer = await peerConnection.createOffer()
 		await peerConnection.setLocalDescription(offer)
 		signalingSocketRef.current?.emit('message', { type: 'offer', offer })
-	}
-
-	if (error) {
-		return <div>{error}</div>
-	}
-
-	if (!roomData) {
-		return <div>Loading...</div>
 	}
 
 	return (
