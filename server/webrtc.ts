@@ -1,34 +1,31 @@
-import http from 'http'
+import { createServer } from 'http'
 import { Server } from 'socket.io'
 
-const server = http.createServer()
-const io = new Server(server, {
-	cors: {
-		origin: '*',
-	},
-	// Specify the path for WebSocket connections
+const httpServer = createServer((req, res) => {
+	if (req.url !== '/') {
+		res.writeHead(404)
+		res.end('Not found')
+		return
+	}
+	// reload the file every time
+
+	res.writeHead(200, {
+		'Content-Type': 'text',
+		'Content-Length': length,
+	})
+	res.end('socket.io')
 })
 
-const PORT = process.env.PORT || 9999
+const io = new Server(httpServer, {
+	// Socket.IO options
+})
 
 io.on('connection', socket => {
-	console.log('Client connected:', socket.id)
+	console.log(`connect ${socket.id}`)
 
-	socket.on('join', roomId => {
-		socket.join(roomId)
-		console.log(`Client ${socket.id} joined room ${roomId}`)
-	})
-
-	socket.on('message', data => {
-		console.log(`Message from ${socket.id} in room ${data.roomId}: ${data.message}`)
-		io.to(data.roomId).emit('message', data.message)
-	})
-
-	socket.on('disconnect', () => {
-		console.log('Client disconnected:', socket.id)
+	socket.on('disconnect', reason => {
+		console.log(`disconnect ${socket.id} due to ${reason}`)
 	})
 })
 
-server.listen(PORT, () => {
-	console.log(`WebRTC signaling server is running on port ${PORT}`)
-})
+httpServer.listen(9999)

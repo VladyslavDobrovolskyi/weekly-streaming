@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import io from 'socket.io-client'
-
 interface RoomData {
 	room_id: string
 	user_id: string
@@ -19,9 +18,15 @@ const Room: React.FC = () => {
 	const [users, setUsers] = useState<UserData[]>([])
 	const [error, setError] = useState<string | null>(null)
 	const [message, setMessage] = useState<string>('')
-	const signalingSocketRef = useRef<ReturnType<typeof io> | null>(null)
 
 	useEffect(() => {
+		const socket = io('http://streaming.vladyslavdobrovolskyi.tehc/socket.io')
+
+		socket.on('hello', arg => {
+			console.log(arg)
+		})
+		socket.emit('howdy', 'stranger')
+
 		const fetchRoomData = async () => {
 			try {
 				console.log('Fetching room data...')
@@ -47,7 +52,6 @@ const Room: React.FC = () => {
 				console.log('Room data fetched:', data)
 				setRoomData(data.room)
 				setUsers(data.users)
-				setupSocket(data.room.room_id)
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error('Error fetching room data:', error.message)
@@ -56,41 +60,8 @@ const Room: React.FC = () => {
 			}
 		}
 
-		const setupSocket = (roomId: string) => {
-			console.log('Setting up socket...')
-			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/socket.io', {
-				transports: ['websocket'], // Use WebSocket instead of polling
-			})
-			console.log('Signaling socket created')
-
-			signalingSocketRef.current.on('connect', () => {
-				signalingSocketRef.current?.emit('join', roomId)
-				console.log('Join event emitted for room:', roomId)
-			})
-
-			signalingSocketRef.current.on('message', message => {
-				console.log('Received message from server:', message)
-			})
-
-			signalingSocketRef.current.on('disconnect', () => {
-				console.log('Socket disconnected')
-			})
-
-			signalingSocketRef.current.on('error', error => {
-				console.error('Socket error:', error)
-			})
-		}
-
 		fetchRoomData()
 	}, [])
-
-	const sendMessage = () => {
-		if (signalingSocketRef.current && roomData) {
-			console.log('Sending message:', message)
-			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
-			console.log('Message sent:', message)
-		}
-	}
 
 	if (error) {
 		return <div>{error}</div>
@@ -119,7 +90,7 @@ const Room: React.FC = () => {
 				onChange={e => setMessage(e.target.value)}
 				placeholder='Enter your message'
 			/>
-			<button onClick={sendMessage}>Send Message</button>
+			{/* <button onClick={}>Send Message</button> */}
 		</div>
 	)
 }
