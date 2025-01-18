@@ -58,7 +58,7 @@ const Room: React.FC = () => {
 
 				localStreamRef.current = localStream
 				console.log('Local stream created')
-				signalingSocketRef.current = new WebSocket('https://streaming.vladyslavdobrovolskyi.tech/ws')
+				signalingSocketRef.current = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws')
 
 				console.log('Signaling socket created')
 				signalingSocketRef.current.onmessage = message => {
