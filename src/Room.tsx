@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
+import io from 'socket.io-client'
 
 interface RoomData {
 	room_id: string
@@ -17,9 +18,8 @@ const Room: React.FC = () => {
 	const [roomData, setRoomData] = useState<RoomData | null>(null)
 	const [users, setUsers] = useState<UserData[]>([])
 	const [error, setError] = useState<string | null>(null)
-	const localStreamRef = useRef<MediaStream | null>(null)
-	const peerConnectionsRef = useRef<{ [key: string]: RTCPeerConnection }>({})
-	const signalingSocketRef = useRef<WebSocket | null>(null)
+	const [message, setMessage] = useState<string>('')
+	const signalingSocketRef = useRef<ReturnType<typeof io> | null>(null)
 
 	useEffect(() => {
 		const fetchRoomData = async () => {
@@ -45,7 +45,7 @@ const Room: React.FC = () => {
 				const data = await response.json()
 				setRoomData(data.room)
 				setUsers(data.users)
-				setupWebRTC(data.room.room_id)
+				setupSocket(data.room.room_id)
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error('Error fetching room data:', error.message)
@@ -54,111 +54,29 @@ const Room: React.FC = () => {
 			}
 		}
 
-		const setupWebRTC = async (roomId: string) => {
-			try {
-				if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-					throw new Error('WebRTC is not supported in this browser')
-				}
+		const setupSocket = (roomId: string) => {
+			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech', {
+				path: '/ws',
+			})
+			console.log('Signaling socket created')
 
-				const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-				localStreamRef.current = localStream
-				console.log('Local stream created')
+			signalingSocketRef.current.on('connect', () => {
+				signalingSocketRef.current?.emit('join', roomId)
+				console.log('Join event emitted for room:', roomId)
+			})
 
-				const peerConnection = new RTCPeerConnection({
-					iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-				})
-
-				peerConnection.onicecandidate = event => {
-					if (event.candidate) {
-						signalingSocketRef.current?.send(
-							JSON.stringify({
-								type: 'signal',
-								room: roomId,
-								desc: { type: 'candidate', candidate: event.candidate },
-							})
-						)
-						console.log('Sent candidate:', event.candidate)
-					}
-				}
-
-				peerConnection.ontrack = () => {
-					// Handle remote stream
-				}
-
-				localStream.getTracks().forEach(track => {
-					peerConnection.addTrack(track, localStream)
-				})
-
-				peerConnectionsRef.current[roomId] = peerConnection
-
-				signalingSocketRef.current = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws')
-				console.log('Signaling socket created')
-
-				signalingSocketRef.current.onmessage = message => {
-					const data = JSON.parse(message.data)
-					handleSignalingData(data)
-				}
-				console.log('Signaling socket message handler set')
-
-				signalingSocketRef.current.onopen = () => {
-					signalingSocketRef.current?.send(JSON.stringify({ type: 'join', roomId }))
-					console.log('Join event emitted for room:', roomId)
-				}
-			} catch (error) {
-				if (error instanceof Error) {
-					console.log('WEBRTC error:', error.message)
-					setError(error.message)
-				}
-			}
-		}
-
-		const handleSignalingData = async (data: {
-			desc: RTCSessionDescriptionInit | { type: 'candidate'; candidate: RTCIceCandidateInit }
-		}) => {
-			const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
-			if (!peerConnection) return
-
-			switch (data.desc.type) {
-				case 'offer': {
-					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.desc))
-					const answer = await peerConnection.createAnswer()
-					await peerConnection.setLocalDescription(answer)
-					signalingSocketRef.current?.send(
-						JSON.stringify({ type: 'signal', room: roomData?.room_id, desc: answer })
-					)
-					break
-				}
-				case 'answer':
-					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.desc))
-					break
-				case 'candidate':
-					await peerConnection.addIceCandidate(new RTCIceCandidate(data.desc.candidate))
-					break
-				default:
-					break
-			}
+			signalingSocketRef.current.on('message', message => {
+				console.log('Received message from server:', message)
+			})
 		}
 
 		fetchRoomData()
-	}, [roomData?.room_id])
+	}, [])
 
-	const createOffer = async () => {
-		try {
-			console.log('Create offer')
-			const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
-			if (!peerConnection) {
-				console.warn('No peer connection found')
-				return
-			}
-
-			const offer = await peerConnection.createOffer()
-			await peerConnection.setLocalDescription(offer)
-			console.log('Offer created and set as local description:', offer)
-
-			signalingSocketRef.current?.send(JSON.stringify({ type: 'signal', room: roomData?.room_id, desc: offer }))
-			console.log('Offer sent to signaling server')
-		} catch (error) {
-			console.error('Error creating offer:', error)
+	const sendMessage = () => {
+		if (signalingSocketRef.current && roomData) {
+			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
+			console.log('Message sent:', message)
 		}
 	}
 
@@ -183,7 +101,13 @@ const Room: React.FC = () => {
 					</li>
 				))}
 			</ul>
-			<button onClick={createOffer}>Create Offer</button>
+			<input
+				type='text'
+				value={message}
+				onChange={e => setMessage(e.target.value)}
+				placeholder='Enter your message'
+			/>
+			<button onClick={sendMessage}>Send Message</button>
 		</div>
 	)
 }

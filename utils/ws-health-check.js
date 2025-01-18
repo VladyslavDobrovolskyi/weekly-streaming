@@ -1,16 +1,16 @@
-import { io } from 'socket.io-client'
+import WebSocket from 'ws'
 
-const socket = io('https://streaming.vladyslavdobrovolskyi.tech/ws')
+const socket = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws')
 
-socket.on('connect', () => {
-	console.log('Socket.io connection established')
+socket.on('open', () => {
+	console.log('WebSocket connection established')
 
 	// Send a test message to the server
-	socket.emit('message', { type: 'test', message: 'Hello, server!' })
+	socket.send(JSON.stringify({ type: 'test', message: 'Hello, server!' }))
 
 	// Keep the connection open for 10 seconds to see if any messages are received
 	setTimeout(() => {
-		console.log('Closing Socket.io connection')
+		console.log('Closing WebSocket connection')
 		socket.close()
 	}, 10000)
 })
@@ -23,10 +23,10 @@ socket.on('message', data => {
 	}
 })
 
-socket.on('disconnect', () => {
-	console.log('Socket.io connection closed')
+socket.on('close', () => {
+	console.log('WebSocket connection closed')
 })
 
-socket.on('connect_error', err => {
-	console.error('Socket.io connection error:', err.message)
+socket.on('error', err => {
+	console.error('WebSocket connection error:', err.message)
 })

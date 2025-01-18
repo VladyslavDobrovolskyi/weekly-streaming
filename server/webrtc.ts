@@ -1,91 +1,37 @@
-import express, { Request, Response } from 'express'
+import express from 'express'
 import http from 'http'
-import ws from 'ws'
-import { validate, version } from 'uuid'
+import { Server } from 'socket.io'
 
 const app = express()
 const server = http.createServer(app)
-const wss = new ws.WebSocketServer({ server })
+const io = new Server(server, {
+	cors: {
+		origin: '*',
+	},
+	path: '/ws', // Specify the path for WebSocket connections
+})
 
 const PORT = process.env.PORT || 9999
 
-interface CustomWebSocket extends ws.WebSocket {
-	room?: string | null
-}
+io.on('connection', socket => {
+	console.log('Client connected:', socket.id)
 
-function getClientRooms(): string[] {
-	const rooms = new Set<string>()
-	wss.clients.forEach((client: CustomWebSocket) => {
-		if (client.room) {
-			rooms.add(client.room)
-		}
-	})
-	return Array.from(rooms).filter(roomID => validate(roomID) && version(roomID) === 4)
-}
-
-function shareRoomsInfo(): void {
-	const rooms = getClientRooms()
-	wss.clients.forEach(client => {
-		client.send(JSON.stringify({ type: 'share-rooms', rooms }))
-	})
-}
-
-wss.on('connection', (ws: CustomWebSocket) => {
-	console.log('Client connected')
-
-	shareRoomsInfo()
-
-	ws.on('message', message => {
-		const data = JSON.parse(message.toString())
-		switch (data.type) {
-			case 'join': {
-				console.log('Received join request for room:', data.roomId)
-				ws.room = data.roomId
-				const clientsInRoom = Array.from(wss.clients).filter(
-					(client: CustomWebSocket) => client.room === data.roomId
-				)
-
-				if (clientsInRoom.length === 1) {
-					ws.send(JSON.stringify({ type: 'init' }))
-				} else if (clientsInRoom.length === 2) {
-					clientsInRoom.forEach(client => {
-						client.send(JSON.stringify({ type: 'ready' }))
-					})
-				} else {
-					ws.room = null
-					ws.send(JSON.stringify({ type: 'full' }))
-				}
-				break
-			}
-			case 'signal':
-				console.log('Received signal:', data)
-				wss.clients.forEach((client: CustomWebSocket) => {
-					if (client.room === data.room) {
-						client.send(JSON.stringify({ type: 'desc', desc: data.desc }))
-					}
-				})
-				break
-			default:
-				break
-		}
+	socket.on('join', roomId => {
+		socket.join(roomId)
+		console.log(`Client ${socket.id} joined room ${roomId}`)
 	})
 
-	ws.on('close', () => {
-		if (ws.room) {
-			wss.clients.forEach((client: CustomWebSocket) => {
-				if (client.room === ws.room) {
-					client.send(JSON.stringify({ type: 'disconnected' }))
-				}
-			})
-		}
+	socket.on('message', data => {
+		console.log(`Message from ${socket.id} in room ${data.roomId}: ${data.message}`)
+		io.to(data.roomId).emit('message', data.message)
 	})
 
-	ws.on('error', error => {
-		console.error('WebSocket error:', error)
+	socket.on('disconnect', () => {
+		console.log('Client disconnected:', socket.id)
 	})
 })
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (req, res) => {
 	res.send('WebRTC signaling server is running')
 })
 
