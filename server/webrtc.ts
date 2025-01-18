@@ -26,6 +26,16 @@ io.on('connection', socket => {
 	socket.on('disconnect', reason => {
 		console.log(`disconnect ${socket.id} due to ${reason}`)
 	})
+
+	socket.on('howdy', arg => {
+		console.log(arg)
+		socket.emit('hello', 'world')
+	})
+
+	socket.on('message', arg => {
+		console.log(arg)
+		socket.emit('hello', 'world')
+	})
 })
 
 httpServer.listen(9999)
