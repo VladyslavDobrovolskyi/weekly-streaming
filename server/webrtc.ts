@@ -55,7 +55,7 @@ wsNamespace.on('connection', socket => {
 
 	socket.on('message', arg => {
 		console.log(`(/ws namespace) message:`, arg)
-		socket.emit('hello', 'world')
+		socket.emit('hello', arg)
 	})
 })
 
