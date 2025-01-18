@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express'
+import express from 'express'
 import { Server, Socket } from 'socket.io'
 import http from 'http'
 import { validate, version } from 'uuid'
@@ -63,10 +63,6 @@ io.on('connection', (socket: CustomSocket) => {
 	socket.on('error', (error: Error) => {
 		console.error('Socket error:', error)
 	})
-})
-
-app.get('/', (req: Request, res: Response) => {
-	res.send('WebRTC signaling server is running')
 })
 
 server.listen(PORT, () => {
