@@ -58,7 +58,7 @@ const Room: React.FC = () => {
 
 		const setupSocket = (roomId: string) => {
 			console.log('Setting up socket...')
-			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/ws', {
+			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/socket.io', {
 				transports: ['websocket'], // Use WebSocket instead of polling
 			})
 			console.log('Signaling socket created')
