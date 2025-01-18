@@ -1,6 +1,7 @@
-import express from 'express'
-import { Server } from 'socket.io'
+import express, { Request, Response } from 'express'
+import { Server, Socket } from 'socket.io'
 import http from 'http'
+import { validate, version } from 'uuid'
 
 const app = express()
 const server = http.createServer(app)
@@ -10,29 +11,64 @@ const io = new Server(server, {
 	},
 })
 
-io.on('connection', socket => {
+const PORT = process.env.PORT || 9999
+
+interface CustomSocket extends Socket {
+	room?: string | null
+}
+
+function getClientRooms(): string[] {
+	const { rooms } = io.sockets.adapter
+	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
+}
+
+function shareRoomsInfo(): void {
+	io.emit('share-rooms', {
+		rooms: getClientRooms(),
+	})
+}
+
+io.on('connection', (socket: CustomSocket) => {
 	console.log('Client connected:', socket.id)
 
-	socket.on('message', message => {
-		console.log('Received message:', message)
+	shareRoomsInfo()
 
-		// Broadcast the received message to all connected clients except the sender
-		socket.broadcast.emit('message', message)
+	socket.on('join', (data: { roomId: string }) => {
+		socket.join(data.roomId)
+		socket.room = data.roomId
+		const sockets = io.of('/').adapter.rooms.get(data.roomId)
+		const numClients = sockets ? sockets.size : 0
+
+		if (numClients === 1) {
+			socket.emit('init')
+		} else if (numClients === 2) {
+			io.to(data.roomId).emit('ready')
+		} else {
+			socket.room = null
+			socket.leave(data.roomId)
+			socket.emit('full')
+		}
+	})
+
+	socket.on('signal', (data: { room: string; desc: RTCSessionDescriptionInit | RTCIceCandidate }) => {
+		io.to(data.room).emit('desc', data.desc)
 	})
 
 	socket.on('disconnect', () => {
-		console.log('Client disconnected:', socket.id)
+		if (socket.room) {
+			io.to(socket.room).emit('disconnected')
+		}
 	})
 
-	socket.on('error', error => {
+	socket.on('error', (error: Error) => {
 		console.error('Socket error:', error)
 	})
 })
 
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
 	res.send('WebRTC signaling server is running')
 })
 
-server.listen(9999, () => {
-	console.log('WebRTC signaling server is running on :9999')
+server.listen(PORT, () => {
+	console.log(`WebRTC signaling server is running on port ${PORT}`)
 })

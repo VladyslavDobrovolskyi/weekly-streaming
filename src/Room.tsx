@@ -71,7 +71,10 @@ const Room: React.FC = () => {
 
 				peerConnection.onicecandidate = event => {
 					if (event.candidate) {
-						signalingSocketRef.current?.emit('message', { type: 'candidate', candidate: event.candidate })
+						signalingSocketRef.current?.emit('signal', {
+							room: roomId,
+							desc: { type: 'candidate', candidate: event.candidate },
+						})
 					}
 				}
 
@@ -88,12 +91,12 @@ const Room: React.FC = () => {
 				signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/ws')
 				console.log('Signaling socket created')
 
-				signalingSocketRef.current.on('message', data => {
+				signalingSocketRef.current.on('desc', data => {
 					handleSignalingData(data)
 				})
 				console.log('Signaling socket message handler set')
 
-				signalingSocketRef.current.emit('message', { type: 'join', roomId })
+				signalingSocketRef.current.emit('join', { roomId })
 			} catch (error) {
 				if (error instanceof Error) {
 					console.log('WEBRTC error:', error.message)
@@ -103,34 +106,31 @@ const Room: React.FC = () => {
 		}
 
 		const handleSignalingData = async (data: {
-			type: string
-			offer?: RTCSessionDescriptionInit
-			answer?: RTCSessionDescriptionInit
-			candidate?: RTCIceCandidateInit
+			desc: { type: RTCSdpType; sdp?: string; candidate?: RTCIceCandidateInit }
 		}) => {
 			const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
 			if (!peerConnection) return
 
-			switch (data.type) {
+			switch (data.desc.type) {
 				case 'offer':
 					{
-						if (data.offer) {
-							await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+						if (data.desc.sdp) {
+							await peerConnection.setRemoteDescription(
+								new RTCSessionDescription({ type: data.desc.type, sdp: data.desc.sdp })
+							)
 						}
 						const answer = await peerConnection.createAnswer()
 						await peerConnection.setLocalDescription(answer)
-						signalingSocketRef.current?.emit('message', { type: 'answer', answer })
+						signalingSocketRef.current?.emit('signal', { room: roomData?.room_id, desc: answer })
 					}
 					break
 				case 'answer':
-					if (data.answer) {
-						await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
-					}
-					break
-				case 'candidate':
-					await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
+					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.desc))
 					break
 				default:
+					if (data.desc.candidate) {
+						await peerConnection.addIceCandidate(new RTCIceCandidate(data.desc.candidate))
+					}
 					break
 			}
 		}
@@ -138,21 +138,21 @@ const Room: React.FC = () => {
 		fetchRoomData()
 	}, [roomData?.room_id])
 
-	if (error) {
-		return <div>{error}</div>
-	}
-
-	if (!roomData) {
-		return <div>Loading...</div>
-	}
-
 	const createOffer = async () => {
 		const peerConnection = peerConnectionsRef.current[roomData?.room_id || '']
 		if (!peerConnection) return
 
 		const offer = await peerConnection.createOffer()
 		await peerConnection.setLocalDescription(offer)
-		signalingSocketRef.current?.emit('message', { type: 'offer', offer })
+		signalingSocketRef.current?.emit('signal', { room: roomData?.room_id, desc: offer })
+	}
+
+	if (error) {
+		return <div>{error}</div>
+	}
+
+	if (!roomData) {
+		return <div>Loading...</div>
 	}
 
 	return (
