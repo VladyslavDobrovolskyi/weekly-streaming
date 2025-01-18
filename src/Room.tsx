@@ -24,6 +24,7 @@ const Room: React.FC = () => {
 	useEffect(() => {
 		const fetchRoomData = async () => {
 			try {
+				console.log('Fetching room data...')
 				const token = localStorage.getItem('token')
 				if (!token) {
 					throw new Error('Token not found')
@@ -43,6 +44,7 @@ const Room: React.FC = () => {
 				}
 
 				const data = await response.json()
+				console.log('Room data fetched:', data)
 				setRoomData(data.room)
 				setUsers(data.users)
 				setupSocket(data.room.room_id)
@@ -55,6 +57,7 @@ const Room: React.FC = () => {
 		}
 
 		const setupSocket = (roomId: string) => {
+			console.log('Setting up socket...')
 			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech', {
 				path: '/ws',
 			})
@@ -68,6 +71,14 @@ const Room: React.FC = () => {
 			signalingSocketRef.current.on('message', message => {
 				console.log('Received message from server:', message)
 			})
+
+			signalingSocketRef.current.on('disconnect', () => {
+				console.log('Socket disconnected')
+			})
+
+			signalingSocketRef.current.on('error', error => {
+				console.error('Socket error:', error)
+			})
 		}
 
 		fetchRoomData()
@@ -75,6 +86,7 @@ const Room: React.FC = () => {
 
 	const sendMessage = () => {
 		if (signalingSocketRef.current && roomData) {
+			console.log('Sending message:', message)
 			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
 			console.log('Message sent:', message)
 		}
