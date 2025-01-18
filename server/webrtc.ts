@@ -1,10 +1,8 @@
-import express from 'express'
 import { Server, Socket } from 'socket.io'
 import http from 'http'
 import { validate, version } from 'uuid'
 
-const app = express()
-const server = http.createServer(app)
+const server = http.createServer()
 const io = new Server(server, {
 	cors: {
 		origin: '*',
