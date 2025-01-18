@@ -1,7 +1,9 @@
+import express from 'express'
 import { Server } from 'socket.io'
 import http from 'http'
 
-const server = http.createServer()
+const app = express()
+const server = http.createServer(app)
 const io = new Server(server, {
 	cors: {
 		origin: '*',
@@ -25,6 +27,10 @@ io.on('connection', socket => {
 	socket.on('error', error => {
 		console.error('Socket error:', error)
 	})
+})
+
+app.get('/', (req, res) => {
+	res.send('WebRTC signaling server is running')
 })
 
 server.listen(9999, () => {

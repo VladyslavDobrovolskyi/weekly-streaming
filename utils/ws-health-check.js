@@ -1,35 +1,32 @@
-import WebSocket from 'ws'
+import { io } from 'socket.io-client'
 
-const ws = new WebSocket('wss://streaming.vladyslavdobrovolskyi.tech/ws/')
+const socket = io('https://streaming.vladyslavdobrovolskyi.tech/ws')
 
-ws.on('open', function open() {
-	console.log('WebSocket connection established')
+socket.on('connect', () => {
+	console.log('Socket.io connection established')
 
 	// Send a test message to the server
-	ws.send(JSON.stringify({ type: 'test', message: 'Hello, server!' }))
+	socket.emit('message', { type: 'test', message: 'Hello, server!' })
 
 	// Keep the connection open for 10 seconds to see if any messages are received
 	setTimeout(() => {
-		console.log('Closing WebSocket connection')
-		ws.close()
+		console.log('Closing Socket.io connection')
+		socket.close()
 	}, 10000)
 })
 
-ws.on('message', function message(data) {
+socket.on('message', data => {
 	try {
-		const rawData = data
-		const parsedData = JSON.parse(rawData)
-		console.log('Received raw message from server:', rawData)
-		console.log('Received parsed message from server:', parsedData)
+		console.log('Received message from server:', data)
 	} catch (error) {
 		console.error('Error parsing message:', error)
 	}
 })
 
-ws.on('close', function close() {
-	console.log('WebSocket connection closed')
+socket.on('disconnect', () => {
+	console.log('Socket.io connection closed')
 })
 
-ws.on('error', function error(err) {
-	console.error('WebSocket connection error:', err.message)
+socket.on('connect_error', err => {
+	console.error('Socket.io connection error:', err.message)
 })
