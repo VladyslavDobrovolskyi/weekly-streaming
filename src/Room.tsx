@@ -1,15 +1,17 @@
-import React, { useEffect, useState } from 'react'
-import io, { Socket } from 'socket.io-client'
+import React, { useEffect, useState, useRef } from 'react'
+import io from 'socket.io-client'
 
 interface RoomData {
 	room_id: string
 	user_id: string
+	// Add more fields as needed
 }
 
 interface UserData {
 	id: string
 	username: string
 	email: string
+	// Add more fields as needed
 }
 
 const Room: React.FC = () => {
@@ -18,75 +20,35 @@ const Room: React.FC = () => {
 	const [error, setError] = useState<string | null>(null)
 	const [message, setMessage] = useState<string>('')
 	const [receivedMessages, setReceivedMessages] = useState<string[]>([])
+	const signalingSocketRef = useRef<ReturnType<typeof io> | null>(null)
 
-	// Сохраняем сокет в useRef или useState, чтобы не создавать новый при каждом рендере
-	const [socket, setSocket] = useState<typeof Socket | null>(null)
-
-	useEffect(() => {
-		// Подключение к namespace '/socket.io'
-		const newSocket = io('https://streaming.vladyslavdobrovolskyi.tech/socket.io', {
-			transports: ['websocket'],
-		})
-
-		setSocket(newSocket)
-
-		// Логирование успешного подключения
-		newSocket.on('connect', () => {
-			console.log(`Connected to /socket.io with ID: ${newSocket.id}`)
-		})
-
-		// Обработчик ответа от сервера
-		newSocket.on('hello', (msg: string) => {
-			console.log('Server says:', msg)
-			setReceivedMessages(prevMessages => [...prevMessages, `Server: ${msg}`])
-		})
-
-		// Обработка полученных сообщений
-		newSocket.on('message', (msg: string) => {
-			console.log('New message:', msg)
-			setReceivedMessages(prevMessages => [...prevMessages, `User: ${msg}`])
-		})
-
-		// Отправляем сообщение серверу после подключения
-		newSocket.emit('howdy', 'Hello from client!')
-
-		// Очистка сокета при размонтировании
-		return () => {
-			newSocket.disconnect()
-			console.log('Socket disconnected')
-		}
-	}, [])
-
-	// Функция для отправки сообщения
-	const sendMessage = () => {
-		if (socket && message.trim() !== '') {
-			socket.emit('message', message)
-			setReceivedMessages(prevMessages => [...prevMessages, `You: ${message}`])
-			setMessage('') // Очистка поля ввода
-		}
-	}
-
-	// Получение данных о комнате
 	useEffect(() => {
 		const fetchRoomData = async () => {
 			try {
 				console.log('Fetching room data...')
 				const token = localStorage.getItem('token')
-				if (!token) throw new Error('Token not found')
+				if (!token) {
+					throw new Error('Token not found')
+				}
 
 				const response = await fetch(
 					'https://streaming.vladyslavdobrovolskyi.tech/api/room_reservations/user',
 					{
-						headers: { Authorization: `Bearer ${token}` },
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
 					}
 				)
 
-				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`)
+				}
 
 				const data = await response.json()
 				console.log('Room data fetched:', data)
 				setRoomData(data.room)
 				setUsers(data.users)
+				setupSocket(data.room.room_id)
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error('Error fetching room data:', error.message)
@@ -95,18 +57,59 @@ const Room: React.FC = () => {
 			}
 		}
 
+		const setupSocket = (roomId: string) => {
+			console.log('Setting up socket...')
+			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/socket.io', {
+				transports: ['websocket'], // Use WebSocket instead of polling
+				path: '/socket.io',
+			})
+			console.log('Signaling socket created')
+
+			signalingSocketRef.current.on('connect', () => {
+				signalingSocketRef.current?.emit('join', roomId)
+				console.log('Join event emitted for room:', roomId)
+			})
+
+			signalingSocketRef.current.on('message', data => {
+				console.log('Received message from server:', data)
+				setReceivedMessages(prevMessages => [...prevMessages, `${data.user}: ${data.message}`])
+			})
+
+			signalingSocketRef.current.on('disconnect', () => {
+				console.log('Socket disconnected')
+			})
+
+			signalingSocketRef.current.on('error', error => {
+				console.error('Socket error:', error)
+			})
+		}
+
 		fetchRoomData()
 	}, [])
 
-	if (error) return <div>{error}</div>
-	if (!roomData) return <div>Loading...</div>
+	const sendMessage = () => {
+		if (signalingSocketRef.current && roomData) {
+			console.log('Sending message:', message)
+			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
+			console.log('Message sent:', message)
+			setReceivedMessages(prevMessages => [...prevMessages, `You: ${message}`])
+			setMessage('') // Clear the input field
+		}
+	}
+
+	if (error) {
+		return <div>{error}</div>
+	}
+
+	if (!roomData) {
+		return <div>Loading...</div>
+	}
 
 	return (
 		<div>
 			<h1>Room</h1>
 			<p>Room ID: {roomData.room_id}</p>
 			<p>User ID: {roomData.user_id}</p>
-
 			<h2>Users in this room:</h2>
 			<ul>
 				{users.map(user => (

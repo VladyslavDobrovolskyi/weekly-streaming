@@ -1,42 +1,16 @@
-import { createServer } from 'http'
+import express from 'express'
+import http from 'http'
 import { Server } from 'socket.io'
 
-const httpServer = createServer((req, res) => {
-	if (req.url !== '/') {
-		res.writeHead(404)
-		res.end('Not found')
-		return
-	}
-
-	res.writeHead(200, {
-		'Content-Type': 'text/plain',
-	})
-	res.end('socket.io')
+const app = express()
+const server = http.createServer(app)
+const io = new Server(server, {
+	cors: {
+		origin: '*',
+	},
 })
 
-// Создаём сервер Socket.IO
-const io = new Server(httpServer, {
-	// Socket.IO options
-})
-
-// Namespace по умолчанию ('/')
-io.on('connection', socket => {
-	console.log(`(default namespace) connect ${socket.id}`)
-
-	socket.on('disconnect', reason => {
-		console.log(`(default namespace) disconnect ${socket.id} due to ${reason}`)
-	})
-
-	socket.on('howdy', arg => {
-		console.log(arg)
-		socket.emit('hello', 'world')
-	})
-
-	socket.on('message', arg => {
-		console.log(arg)
-		socket.emit('hello', 'world')
-	})
-})
+const PORT = process.env.PORT || 9999
 
 // Namespace '/socket.io'
 const wsNamespace = io.of('/socket.io')
@@ -44,20 +18,25 @@ const wsNamespace = io.of('/socket.io')
 wsNamespace.on('connection', socket => {
 	console.log(`(/ws namespace) connect ${socket.id}`)
 
+	socket.on('join', roomId => {
+		socket.join(roomId)
+		console.log(`Client ${socket.id} joined room ${roomId}`)
+	})
+
+	socket.on('message', data => {
+		console.log(`Message from ${socket.id} in room ${data.roomId}: ${data.message}`)
+		wsNamespace.to(data.roomId).emit('message', { user: socket.id, message: data.message })
+	})
+
 	socket.on('disconnect', reason => {
 		console.log(`(/ws namespace) disconnect ${socket.id} due to ${reason}`)
 	})
-
-	socket.on('howdy', arg => {
-		console.log(`(/ws namespace) howdy:`, arg)
-		socket.emit('hello', 'world')
-	})
-
-	socket.on('message', arg => {
-		console.log(`(/ws namespace) message:`, arg)
-		socket.emit('hello', arg)
-	})
 })
 
-httpServer.listen(9999)
-console.log('WS server listening on port 9999')
+app.get('/', (req, res) => {
+	res.send('WebRTC signaling server is running')
+})
+
+server.listen(PORT, () => {
+	console.log(`WebRTC signaling server is running on port ${PORT}`)
+})
