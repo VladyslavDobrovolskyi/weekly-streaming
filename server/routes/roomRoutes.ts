@@ -4,7 +4,7 @@ import {
 	addRoomReservationHandler,
 	deleteRoomReservationHandler,
 	getUsersInRoomHandler,
-	getRoomByUserIdHandler,
+	getRoomData,
 } from '../controllers/roomController'
 import { authMiddleware } from '../middlware/authMiddleware'
 
@@ -19,6 +19,6 @@ router.delete('/', authMiddleware, deleteRoomReservationHandler)
 //@ts-expect-error ts-typnyak
 router.get('/:roomId/users', authMiddleware, getUsersInRoomHandler)
 //@ts-expect-error ts-typnyak
-router.get('/user', authMiddleware, getRoomByUserIdHandler) // New route to get room by user ID
+router.get('/user', authMiddleware, getRoomData) // New route to get room by user ID
 
 export default router

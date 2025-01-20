@@ -12,6 +12,7 @@ import {
 	getUsersInRoom,
 	getRoomByUserId,
 } from '../services/roomService'
+import { getUserById } from '../services/userService'
 
 export const getAllRoomReservationsHandler = async (req: Request, res: Response) => {
 	try {
@@ -52,16 +53,21 @@ export const getUsersInRoomHandler = async (req: Request, res: Response) => {
 	}
 }
 
-export const getRoomByUserIdHandler = async (req: AuthenticatedRequest, res: Response) => {
+export const getRoomData = async (req: AuthenticatedRequest, res: Response) => {
 	const userId = req.user.id // Assuming req.user is set by authMiddleware
 	try {
-		//@ts-expect-error ts-typnyak
-		const room = await getRoomByUserId(userId)
+		const room = await getRoomByUserId(Number(userId))
 		if (!room) {
 			return res.status(404).json({ message: 'Room not found' })
 		}
 		const users = await getUsersInRoom(room.room_id)
-		res.json({ room, users })
+		const userDetails = await Promise.all(
+			users.map(async (userId: string) => {
+				const user = await getUserById(Number(userId))
+				return user
+			})
+		)
+		res.json({ room, users: userDetails })
 	} catch (err) {
 		res.status(500).json({ error: err.message })
 	}
