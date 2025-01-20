@@ -7,16 +7,9 @@ interface RoomData {
 	// Add more fields as needed
 }
 
-interface UserData {
-	id: string
-	username: string
-	email: string
-	// Add more fields as needed
-}
-
 const Room: React.FC = () => {
 	const [roomData, setRoomData] = useState<RoomData | null>(null)
-	const [users, setUsers] = useState<UserData[]>([])
+	const [users, setUsers] = useState<{ username: string }[]>([])
 	const [error, setError] = useState<string | null>(null)
 	const [message, setMessage] = useState<string>('')
 	const [receivedMessages, setReceivedMessages] = useState<string[]>([])
@@ -47,8 +40,7 @@ const Room: React.FC = () => {
 				const data = await response.json()
 				console.log('Room data fetched:', data)
 				setRoomData(data.room)
-				setUsers(data.users)
-				setupSocket(data.room.room_id)
+				setupSocket(data.room.room_id, data.room.user_id)
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error('Error fetching room data:', error.message)
@@ -57,7 +49,7 @@ const Room: React.FC = () => {
 			}
 		}
 
-		const setupSocket = (roomId: string) => {
+		const setupSocket = (roomId: string, username: string) => {
 			console.log('Setting up socket...')
 			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/socket.io', {
 				transports: ['websocket'], // Use WebSocket instead of polling
@@ -66,8 +58,13 @@ const Room: React.FC = () => {
 			console.log('Signaling socket created')
 
 			signalingSocketRef.current.on('connect', () => {
-				signalingSocketRef.current?.emit('join', roomId)
+				signalingSocketRef.current?.emit('join', { roomId, username })
 				console.log('Join event emitted for room:', roomId)
+			})
+
+			signalingSocketRef.current.on('users', users => {
+				console.log('Received users from server:', users)
+				setUsers(users)
 			})
 
 			signalingSocketRef.current.on('message', data => {
@@ -112,10 +109,8 @@ const Room: React.FC = () => {
 			<p>User ID: {roomData.user_id}</p>
 			<h2>Users in this room:</h2>
 			<ul>
-				{users.map(user => (
-					<li key={user.id}>
-						{user.username} ({user.email})
-					</li>
+				{users.map((user, index) => (
+					<li key={index}>{user.username}</li>
 				))}
 			</ul>
 
