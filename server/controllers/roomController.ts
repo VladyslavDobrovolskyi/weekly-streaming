@@ -53,6 +53,21 @@ export const getUsersInRoomHandler = async (req: Request, res: Response) => {
 	}
 }
 
+export const getRoomByUser = async (req: AuthenticatedRequest, res: Response) => {
+	const userId = Number(req.user.id)
+
+	try {
+		const room = await getRoomByUserId(userId)
+		room.user_id = userId
+		if (!room) {
+			return res.status(404).json({ message: 'Room not found' })
+		}
+		res.json({ room })
+	} catch (err) {
+		res.status(500).json({ error: err.message })
+	}
+}
+
 export const getRoomData = async (req: AuthenticatedRequest, res: Response) => {
 	const userId = Number(req.user.id) // Assuming req.user is set by authMiddleware
 	try {

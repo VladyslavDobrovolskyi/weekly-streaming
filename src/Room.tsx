@@ -44,7 +44,6 @@ const Room: React.FC = () => {
 				const data = await response.json()
 				console.log('Room data fetched:', data)
 				setRoomData(data.room)
-				setUsers(data.users)
 				setupSocket(data.room.room_id, data.room.user_id)
 			} catch (error) {
 				if (error instanceof Error) {
