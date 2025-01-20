@@ -66,6 +66,13 @@ const Room: React.FC = () => {
 				console.log('Join event emitted for room:', roomId)
 			})
 
+			signalingSocketRef.current.on('chatHistory', chatHistory => {
+				console.log('Received chat history from server:', chatHistory)
+				setReceivedMessages(
+					chatHistory.map((msg: { username: string; message: string }) => `${msg.username}: ${msg.message}`)
+				)
+			})
+
 			signalingSocketRef.current.on('users', users => {
 				console.log('Received users from server:', users)
 				setUsers(users)
@@ -93,7 +100,7 @@ const Room: React.FC = () => {
 			console.log('Sending message:', message)
 			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
 			console.log('Message sent:', message)
-			// setReceivedMessages(prevMessages => [...prevMessages, `You: ${message}`])
+			setReceivedMessages(prevMessages => [...prevMessages, `You: ${message}`])
 			setMessage('') // Clear the input field
 		}
 	}

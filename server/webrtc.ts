@@ -1,6 +1,7 @@
 import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io'
+import db from './db/database-connection'
 
 const app = express()
 const server = http.createServer(app)
@@ -20,18 +21,24 @@ const users: { [key: string]: { roomId: string; username: string } } = {} // Sto
 wsNamespace.on('connection', socket => {
 	console.log(`(/ws namespace) connect ${socket.id}`)
 
-	socket.on('join', ({ roomId, username }) => {
+	socket.on('join', async ({ roomId, username }) => {
 		socket.join(roomId)
 		users[socket.id] = { roomId, username }
 		console.log(`Client ${socket.id} joined room ${roomId}`)
+
+		// Retrieve chat history
+		const chatHistory = await getChatHistory(roomId)
+		socket.emit('chatHistory', chatHistory)
+
 		wsNamespace.to(roomId).emit(
 			'users',
 			Object.values(users).filter(user => user.roomId === roomId)
 		)
 	})
 
-	socket.on('message', data => {
+	socket.on('message', async data => {
 		console.log(`Message from ${socket.id} in room ${data.roomId}: ${data.message}`)
+		await saveMessage(data.roomId, users[socket.id].username, data.message)
 		wsNamespace.to(data.roomId).emit('message', { user: users[socket.id].username, message: data.message })
 	})
 
@@ -45,6 +52,22 @@ wsNamespace.on('connection', socket => {
 		)
 	})
 })
+
+const getChatHistory = async (roomId: string) => {
+	const result = await db.query(
+		'SELECT username, message FROM chat_history WHERE room_id = $1 ORDER BY timestamp ASC',
+		[roomId]
+	)
+	return result.rows
+}
+
+const saveMessage = async (roomId: string, username: string, message: string) => {
+	await db.query('INSERT INTO chat_history (room_id, username, message, timestamp) VALUES ($1, $2, $3, NOW())', [
+		roomId,
+		username,
+		message,
+	])
+}
 
 app.get('/', (req, res) => {
 	res.send('WebRTC signaling server is running')
