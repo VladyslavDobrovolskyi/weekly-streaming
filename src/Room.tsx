@@ -7,9 +7,13 @@ interface RoomData {
 	// Add more fields as needed
 }
 
+interface UserData {
+	username: string
+}
+
 const Room: React.FC = () => {
 	const [roomData, setRoomData] = useState<RoomData | null>(null)
-	const [users, setUsers] = useState<{ username: string }[]>([])
+	const [users, setUsers] = useState<UserData[]>([])
 	const [error, setError] = useState<string | null>(null)
 	const [message, setMessage] = useState<string>('')
 	const [receivedMessages, setReceivedMessages] = useState<string[]>([])
@@ -40,7 +44,7 @@ const Room: React.FC = () => {
 				const data = await response.json()
 				console.log('Room data fetched:', data)
 				setRoomData(data.room)
-				setupSocket(data.room.room_id, data.room.user_id)
+				setupSocket(data.room.room_id, data.user.username)
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error('Error fetching room data:', error.message)
