@@ -8,10 +8,7 @@ interface RoomData {
 }
 
 interface UserData {
-	id: string
 	username: string
-	email: string
-	// Add more fields as needed
 }
 
 const Room: React.FC = () => {
@@ -117,10 +114,8 @@ const Room: React.FC = () => {
 			<p>User ID: {roomData.user_id}</p>
 			<h2>Users in this room:</h2>
 			<ul>
-				{users.map(user => (
-					<li key={user.id}>
-						{user.username} ({user.email})
-					</li>
+				{users.map((user, index) => (
+					<li key={index}>{user.username}</li>
 				))}
 			</ul>
 
