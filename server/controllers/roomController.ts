@@ -54,10 +54,10 @@ export const getUsersInRoomHandler = async (req: Request, res: Response) => {
 }
 
 export const getRoomData = async (req: AuthenticatedRequest, res: Response) => {
-	const userId = req.user.id // Assuming req.user is set by authMiddleware
+	const userId = Number(req.user.id) // Assuming req.user is set by authMiddleware
 	try {
 		console.log(`Fetching room data for user ID: ${userId}`)
-		const room = await getRoomByUserId(Number(userId))
+		const room = await getRoomByUserId(userId)
 		if (!room) {
 			return res.status(404).json({ message: 'Room not found' })
 		}
@@ -65,8 +65,8 @@ export const getRoomData = async (req: AuthenticatedRequest, res: Response) => {
 		const users = await getUsersInRoom(room.room_id)
 		console.log(`Users in room: ${users}`)
 		const userDetails = await Promise.all(
-			users.map(async (userId: string) => {
-				const user = await getUserById(Number(userId))
+			users.map(async (userId: number) => {
+				const user = await getUserById(userId)
 				return user
 			})
 		)
