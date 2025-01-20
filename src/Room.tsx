@@ -100,7 +100,6 @@ const Room: React.FC = () => {
 			console.log('Sending message:', message)
 			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
 			console.log('Message sent:', message)
-			setReceivedMessages(prevMessages => [...prevMessages, `You: ${message}`])
 			setMessage('') // Clear the input field
 		}
 	}
