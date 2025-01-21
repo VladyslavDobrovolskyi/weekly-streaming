@@ -5,11 +5,11 @@ import Peer from 'peerjs'
 interface RoomData {
 	room_id: string
 	user_id: string
-	// Add more fields as needed
 }
 
 interface UserData {
 	username: string
+	active: boolean
 }
 
 const Room: React.FC = () => {
@@ -21,12 +21,12 @@ const Room: React.FC = () => {
 	const signalingSocketRef = useRef<ReturnType<typeof io> | null>(null)
 	const localStreamRef = useRef<MediaStream | null>(null)
 	const peerRef = useRef<Peer | null>(null)
-	const peerListRef = useRef<string[]>([])
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const peerListRef = useRef<{ [key: string]: RTCPeerConnection }>({})
 
 	useEffect(() => {
 		const fetchRoomData = async () => {
 			try {
-				console.log('Fetching room data...')
 				const token = localStorage.getItem('token')
 				if (!token) {
 					throw new Error('Token not found')
@@ -35,9 +35,7 @@ const Room: React.FC = () => {
 				const response = await fetch(
 					'https://streaming.vladyslavdobrovolskyi.tech/api/room_reservations/user',
 					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
+						headers: { Authorization: `Bearer ${token}` },
 					}
 				)
 
@@ -46,14 +44,12 @@ const Room: React.FC = () => {
 				}
 
 				const data = await response.json()
-				console.log('Room data fetched:', data)
 				setRoomData(data.room)
 				setupSocket(data.room.room_id, data.room.user_id)
 				await setupLocalStream()
 				initPeer(data.room.user_id)
 			} catch (error) {
 				if (error instanceof Error) {
-					console.error('Error fetching room data:', error.message)
 					setError(error.message)
 				}
 			}
@@ -63,48 +59,35 @@ const Room: React.FC = () => {
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				localStreamRef.current = stream
-				console.log('Local stream obtained')
 			} catch (error) {
 				console.error('Error obtaining local stream:', error)
 			}
 		}
 
 		const setupSocket = (roomId: string, username: string) => {
-			console.log('Setting up socket...')
 			signalingSocketRef.current = io('https://streaming.vladyslavdobrovolskyi.tech/socket.io', {
-				transports: ['websocket'], // Use WebSocket instead of polling
+				transports: ['websocket'],
 				path: '/socket.io',
 			})
-			console.log('Signaling socket created')
 
 			signalingSocketRef.current.on('connect', () => {
 				signalingSocketRef.current?.emit('join', { roomId, username })
-				console.log('Join event emitted for room:', roomId)
-			})
-
-			signalingSocketRef.current.on('chatHistory', chatHistory => {
-				console.log('Received chat history from server:', chatHistory)
-				setReceivedMessages(
-					chatHistory.map((msg: { username: string; message: string }) => `${msg.username}: ${msg.message}`)
-				)
 			})
 
 			signalingSocketRef.current.on('users', users => {
-				console.log('Received users from server:', users)
-				setUsers(users)
+				setUsers(users.map((user: UserData) => ({ ...user, active: false })))
 			})
 
 			signalingSocketRef.current.on('message', data => {
-				console.log('Received message from server:', data)
 				setReceivedMessages(prevMessages => [...prevMessages, `${data.user}: ${data.message}`])
 			})
 
-			signalingSocketRef.current.on('disconnect', () => {
-				console.log('Socket disconnected')
-			})
-
-			signalingSocketRef.current.on('error', error => {
-				console.error('Socket error:', error)
+			signalingSocketRef.current.on('webrtc-offer', async data => {
+				const peerConnection = createPeerConnection(data.from)
+				await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+				const answer = await peerConnection.createAnswer()
+				await peerConnection.setLocalDescription(answer)
+				signalingSocketRef.current?.emit('webrtc-answer', { to: data.from, answer })
 			})
 		}
 
@@ -113,35 +96,43 @@ const Room: React.FC = () => {
 			peerRef.current.on('open', id => {
 				console.log(`${id} connected`)
 			})
-
-			listenToCall()
 		}
 
-		const listenToCall = () => {
-			peerRef.current?.on('call', call => {
-				navigator.mediaDevices
-					.getUserMedia({ audio: true, video: false })
-					.then(stream => {
-						localStreamRef.current = stream
-						call.answer(stream)
-						call.on('stream', remoteStream => {
-							if (!peerListRef.current.includes(call.peer)) {
-								addRemoteAudio(remoteStream)
-								peerListRef.current.push(call.peer)
-							}
-						})
+		const createPeerConnection = (userId: string) => {
+			const peerConnection = new RTCPeerConnection()
+			peerConnection.onicecandidate = event => {
+				if (event.candidate) {
+					signalingSocketRef.current?.emit('webrtc-ice-candidate', {
+						to: userId,
+						candidate: event.candidate,
 					})
-					.catch(err => {
-						console.log('Unable to connect because ' + err)
-					})
-			})
-		}
-
-		const addRemoteAudio = (stream: MediaStream) => {
-			const audio = document.getElementById('remoteAudio') as HTMLAudioElement
-			if (audio) {
-				audio.srcObject = stream
+				}
 			}
+			peerConnection.ontrack = event => {
+				addRemoteAudio(event.streams[0], userId)
+			}
+			localStreamRef.current?.getTracks().forEach(track => {
+				peerConnection.addTrack(track, localStreamRef.current!)
+			})
+			return peerConnection
+		}
+
+		const addRemoteAudio = (stream: MediaStream, userId: string) => {
+			const audioContext = new AudioContext()
+			const analyser = audioContext.createAnalyser()
+			const source = audioContext.createMediaStreamSource(stream)
+			source.connect(analyser)
+
+			const dataArray = new Uint8Array(analyser.frequencyBinCount)
+			const updateActiveState = () => {
+				analyser.getByteFrequencyData(dataArray)
+				const isActive = dataArray.some(value => value > 50)
+				setUsers(prevUsers =>
+					prevUsers.map(user => (user.username === userId ? { ...user, active: isActive } : user))
+				)
+				requestAnimationFrame(updateActiveState)
+			}
+			updateActiveState()
 		}
 
 		fetchRoomData()
@@ -149,10 +140,8 @@ const Room: React.FC = () => {
 
 	const sendMessage = () => {
 		if (signalingSocketRef.current && roomData) {
-			console.log('Sending message:', message)
 			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
-			console.log('Message sent:', message)
-			setMessage('') // Clear the input field
+			setMessage('')
 		}
 	}
 
@@ -172,7 +161,9 @@ const Room: React.FC = () => {
 			<h2>Users in this room:</h2>
 			<ul>
 				{users.map((user, index) => (
-					<li key={index}>{user.username}</li>
+					<li key={index}>
+						{user.username} {user.active ? '🎤 Speaking' : '🟢 Online'}
+					</li>
 				))}
 			</ul>
 
@@ -190,7 +181,6 @@ const Room: React.FC = () => {
 				placeholder='Enter your message'
 			/>
 			<button onClick={sendMessage}>Send Message</button>
-			<audio id='remoteAudio' autoPlay></audio>
 		</div>
 	)
 }
