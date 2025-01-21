@@ -51,6 +51,19 @@ wsNamespace.on('connection', socket => {
 			Object.values(users).filter(user => user.roomId === roomId)
 		)
 	})
+
+	// Handle WebRTC signaling messages
+	socket.on('webrtc-offer', data => {
+		wsNamespace.to(data.roomId).emit('webrtc-offer', data)
+	})
+
+	socket.on('webrtc-answer', data => {
+		wsNamespace.to(data.roomId).emit('webrtc-answer', data)
+	})
+
+	socket.on('webrtc-ice-candidate', data => {
+		wsNamespace.to(data.roomId).emit('webrtc-ice-candidate', data)
+	})
 })
 
 const getChatHistory = async (roomId: string) => {
