@@ -1,7 +1,7 @@
 import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io'
-import db from '../api-server/db/database-connection' // Assuming you're using PostgreSQL
+import db from './db/database-connection' // Assuming you're using PostgreSQL
 
 const app = express()
 const server = http.createServer(app)
