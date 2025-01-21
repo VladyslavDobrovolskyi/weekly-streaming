@@ -54,15 +54,15 @@ wsNamespace.on('connection', socket => {
 
 	// Handle WebRTC signaling messages
 	socket.on('webrtc-offer', data => {
-		wsNamespace.to(data.roomId).emit('webrtc-offer', data)
+		wsNamespace.to(data.to).emit('webrtc-offer', data)
 	})
 
 	socket.on('webrtc-answer', data => {
-		wsNamespace.to(data.roomId).emit('webrtc-answer', data)
+		wsNamespace.to(data.to).emit('webrtc-answer', data)
 	})
 
 	socket.on('webrtc-ice-candidate', data => {
-		wsNamespace.to(data.roomId).emit('webrtc-ice-candidate', data)
+		wsNamespace.to(data.to).emit('webrtc-ice-candidate', data)
 	})
 })
 

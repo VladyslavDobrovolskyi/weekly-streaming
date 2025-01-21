@@ -89,6 +89,12 @@ const Room: React.FC = () => {
 			signalingSocketRef.current.on('users', users => {
 				console.log('Received users from server:', users)
 				setUsers(users)
+				// Create peer connections for new users
+				users.forEach((user: UserData) => {
+					if (!peerConnectionsRef.current[user.username]) {
+						createPeerConnection(user.username)
+					}
+				})
 			})
 
 			signalingSocketRef.current.on('message', data => {
@@ -130,55 +136,43 @@ const Room: React.FC = () => {
 			})
 		}
 
+		const createPeerConnection = (peerId: string) => {
+			const peerConnection = new RTCPeerConnection({
+				iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+			})
+
+			peerConnection.onicecandidate = event => {
+				if (event.candidate) {
+					signalingSocketRef.current?.emit('webrtc-ice-candidate', { to: peerId, candidate: event.candidate })
+				}
+			}
+
+			peerConnection.ontrack = event => {
+				const remoteAudio = document.getElementById('remoteAudio') as HTMLAudioElement
+				if (remoteAudio) {
+					remoteAudio.srcObject = event.streams[0]
+				}
+			}
+
+			if (localStreamRef.current) {
+				localStreamRef.current.getTracks().forEach(track => {
+					peerConnection.addTrack(track, localStreamRef.current as MediaStream)
+				})
+			}
+
+			peerConnectionsRef.current[peerId] = peerConnection
+			return peerConnection
+		}
+
 		fetchRoomData()
 	}, [])
-
-	const createPeerConnection = (peerId: string) => {
-		const peerConnection = new RTCPeerConnection({
-			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-		})
-
-		peerConnection.onicecandidate = event => {
-			if (event.candidate) {
-				signalingSocketRef.current?.emit('webrtc-ice-candidate', { to: peerId, candidate: event.candidate })
-			}
-		}
-
-		peerConnection.ontrack = event => {
-			const remoteAudio = document.getElementById('remoteAudio') as HTMLAudioElement
-			if (remoteAudio) {
-				remoteAudio.srcObject = event.streams[0]
-			}
-		}
-
-		if (localStreamRef.current) {
-			localStreamRef.current.getTracks().forEach(track => {
-				peerConnection.addTrack(track, localStreamRef.current as MediaStream)
-			})
-		}
-
-		peerConnectionsRef.current[peerId] = peerConnection
-		return peerConnection
-	}
 
 	const sendMessage = () => {
 		if (signalingSocketRef.current && roomData) {
 			console.log('Sending message:', message)
 			signalingSocketRef.current.emit('message', { roomId: roomData.room_id, message })
 			console.log('Message sent:', message)
-			setReceivedMessages(prevMessages => [...prevMessages, `You: ${message}`])
 			setMessage('') // Clear the input field
-		}
-	}
-
-	const startCall = async () => {
-		if (signalingSocketRef.current && roomData) {
-			for (const user of users) {
-				const peerConnection = createPeerConnection(user.username)
-				const offer = await peerConnection.createOffer()
-				await peerConnection.setLocalDescription(offer)
-				signalingSocketRef.current.emit('webrtc-offer', { to: user.username, offer })
-			}
 		}
 	}
 
@@ -216,7 +210,6 @@ const Room: React.FC = () => {
 				placeholder='Enter your message'
 			/>
 			<button onClick={sendMessage}>Send Message</button>
-			<button onClick={startCall}>Start Call</button>
 			<audio id='remoteAudio' autoPlay></audio>
 		</div>
 	)
