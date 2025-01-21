@@ -5,7 +5,7 @@ import {
 	createUserHandler,
 	updateUserHandler,
 	deleteUserHandler,
-} from '../controllers/userController'
+} from '../controllers/userController.ts'
 import { authMiddleware } from '../middlware/authMiddleware.ts'
 
 const router = Router()

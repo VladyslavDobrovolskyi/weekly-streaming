@@ -5,7 +5,7 @@ FROM node:18
 WORKDIR /app
 
 # Копируем package.json и package-lock.json в контейнер
-COPY package*.json ./
+COPY ../package*.json ./
 
 # Устанавливаем зависимости
 RUN npm install
@@ -14,8 +14,7 @@ RUN npm install
 COPY . .
 
 # Открываем порты, на которых приложение будет работать
-
-EXPOSE 7777
+EXPOSE 9999
 
 # Запускаем оба процесса, один в фоне
-CMD sh -c "npm run dev"
+CMD sh -c "npm run webrtc-server"
