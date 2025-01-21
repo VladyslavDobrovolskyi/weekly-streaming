@@ -8,8 +8,7 @@
 		"build": "tsc -b && vite build",
 		"lint": "eslint .",
 		"preview": "vite preview",
-		"api-server": "tsx --tsconfig tsconfig.server.json server/main.ts",
-		"webrtc-server": "tsx --tsconfig tsconfig.server.json server/webrtc.ts"
+		"api-server": "tsx --tsconfig tsconfig.server.json main.ts"
 	},
 	"dependencies": {
 		"@types/pg": "^8.11.10",
