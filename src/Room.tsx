@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import io from 'socket.io-client'
+import Peer from 'peerjs'
 
 interface RoomData {
 	room_id: string
@@ -19,7 +20,8 @@ const Room: React.FC = () => {
 	const [receivedMessages, setReceivedMessages] = useState<string[]>([])
 	const signalingSocketRef = useRef<ReturnType<typeof io> | null>(null)
 	const localStreamRef = useRef<MediaStream | null>(null)
-	const peerConnectionsRef = useRef<{ [key: string]: RTCPeerConnection }>({})
+	const peerRef = useRef<Peer | null>(null)
+	const peerListRef = useRef<string[]>([])
 
 	useEffect(() => {
 		const fetchRoomData = async () => {
@@ -48,6 +50,7 @@ const Room: React.FC = () => {
 				setRoomData(data.room)
 				setupSocket(data.room.room_id, data.room.user_id)
 				await setupLocalStream()
+				initPeer(data.room.user_id)
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error('Error fetching room data:', error.message)
@@ -89,42 +92,11 @@ const Room: React.FC = () => {
 			signalingSocketRef.current.on('users', users => {
 				console.log('Received users from server:', users)
 				setUsers(users)
-				// Create peer connections for new users
-				users.forEach((user: UserData) => {
-					if (!peerConnectionsRef.current[user.username]) {
-						createPeerConnection(user.username)
-					}
-				})
 			})
 
 			signalingSocketRef.current.on('message', data => {
 				console.log('Received message from server:', data)
 				setReceivedMessages(prevMessages => [...prevMessages, `${data.user}: ${data.message}`])
-			})
-
-			signalingSocketRef.current.on('webrtc-offer', async data => {
-				console.log('Received WebRTC offer:', data)
-				const peerConnection = createPeerConnection(data.from)
-				await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
-				const answer = await peerConnection.createAnswer()
-				await peerConnection.setLocalDescription(answer)
-				signalingSocketRef.current?.emit('webrtc-answer', { to: data.from, answer })
-			})
-
-			signalingSocketRef.current.on('webrtc-answer', async data => {
-				console.log('Received WebRTC answer:', data)
-				const peerConnection = peerConnectionsRef.current[data.from]
-				if (peerConnection) {
-					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
-				}
-			})
-
-			signalingSocketRef.current.on('webrtc-ice-candidate', async data => {
-				console.log('Received WebRTC ICE candidate:', data)
-				const peerConnection = peerConnectionsRef.current[data.from]
-				if (peerConnection) {
-					await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
-				}
 			})
 
 			signalingSocketRef.current.on('disconnect', () => {
@@ -136,32 +108,40 @@ const Room: React.FC = () => {
 			})
 		}
 
-		const createPeerConnection = (peerId: string) => {
-			const peerConnection = new RTCPeerConnection({
-				iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+		const initPeer = (userId: string) => {
+			peerRef.current = new Peer(userId)
+			peerRef.current.on('open', id => {
+				console.log(`${id} connected`)
 			})
 
-			peerConnection.onicecandidate = event => {
-				if (event.candidate) {
-					signalingSocketRef.current?.emit('webrtc-ice-candidate', { to: peerId, candidate: event.candidate })
-				}
-			}
+			listenToCall()
+		}
 
-			peerConnection.ontrack = event => {
-				const remoteAudio = document.getElementById('remoteAudio') as HTMLAudioElement
-				if (remoteAudio) {
-					remoteAudio.srcObject = event.streams[0]
-				}
-			}
+		const listenToCall = () => {
+			peerRef.current?.on('call', call => {
+				navigator.mediaDevices
+					.getUserMedia({ audio: true, video: false })
+					.then(stream => {
+						localStreamRef.current = stream
+						call.answer(stream)
+						call.on('stream', remoteStream => {
+							if (!peerListRef.current.includes(call.peer)) {
+								addRemoteAudio(remoteStream)
+								peerListRef.current.push(call.peer)
+							}
+						})
+					})
+					.catch(err => {
+						console.log('Unable to connect because ' + err)
+					})
+			})
+		}
 
-			if (localStreamRef.current) {
-				localStreamRef.current.getTracks().forEach(track => {
-					peerConnection.addTrack(track, localStreamRef.current as MediaStream)
-				})
+		const addRemoteAudio = (stream: MediaStream) => {
+			const audio = document.getElementById('remoteAudio') as HTMLAudioElement
+			if (audio) {
+				audio.srcObject = stream
 			}
-
-			peerConnectionsRef.current[peerId] = peerConnection
-			return peerConnection
 		}
 
 		fetchRoomData()
