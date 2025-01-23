@@ -23,7 +23,10 @@ function getClientRooms() {
 	if (!adapter) {
 		return []
 	}
-	const { rooms } = adapter
+	const rooms = adapter.sockets.adapter?.rooms
+	if (!rooms) {
+		return []
+	}
 	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
 }
 
