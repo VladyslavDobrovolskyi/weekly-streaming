@@ -1,5 +1,7 @@
-import ACTIONS from './actions'
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+//@ts-nocheck
 
+import ACTIONS from './actions'
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
@@ -11,19 +13,22 @@ const io = new Server(server)
 
 const PORT = process.env.PORT || 9999
 
-function getClientRooms() {
-	const { rooms } = io.sockets.adapter
+// Define a namespace
+const namespace = io.of('/webrtc')
 
+function getClientRooms() {
+	const { rooms } = namespace.sockets.adapter
 	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
 }
 
 function shareRoomsInfo() {
-	io.emit(ACTIONS.SHARE_ROOMS, {
+	namespace.emit(ACTIONS.SHARE_ROOMS, {
 		rooms: getClientRooms(),
 	})
 }
 
-io.on('connection', socket => {
+namespace.on('connection', socket => {
+	console.log('New client connected:', socket.id)
 	shareRoomsInfo()
 
 	socket.on(ACTIONS.JOIN, config => {
@@ -34,10 +39,10 @@ io.on('connection', socket => {
 			return console.warn(`Already joined to ${roomID}`)
 		}
 
-		const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || [])
+		const clients = Array.from(namespace.sockets.adapter.rooms.get(roomID) || [])
 
 		clients.forEach(clientID => {
-			io.to(clientID).emit(ACTIONS.ADD_PEER, {
+			namespace.to(clientID).emit(ACTIONS.ADD_PEER, {
 				peerID: socket.id,
 				createOffer: false,
 			})
@@ -56,13 +61,12 @@ io.on('connection', socket => {
 		const { rooms } = socket
 
 		Array.from(rooms)
-			// LEAVE ONLY CLIENT CREATED ROOM
 			.filter(roomID => validate(roomID) && version(roomID) === 4)
 			.forEach(roomID => {
-				const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || [])
+				const clients = Array.from(namespace.sockets.adapter.rooms.get(roomID) || [])
 
 				clients.forEach(clientID => {
-					io.to(clientID).emit(ACTIONS.REMOVE_PEER, {
+					namespace.to(clientID).emit(ACTIONS.REMOVE_PEER, {
 						peerID: socket.id,
 					})
 
@@ -81,14 +85,14 @@ io.on('connection', socket => {
 	socket.on('disconnecting', leaveRoom)
 
 	socket.on(ACTIONS.RELAY_SDP, ({ peerID, sessionDescription }) => {
-		io.to(peerID).emit(ACTIONS.SESSION_DESCRIPTION, {
+		namespace.to(peerID).emit(ACTIONS.SESSION_DESCRIPTION, {
 			peerID: socket.id,
 			sessionDescription,
 		})
 	})
 
 	socket.on(ACTIONS.RELAY_ICE, ({ peerID, iceCandidate }) => {
-		io.to(peerID).emit(ACTIONS.ICE_CANDIDATE, {
+		namespace.to(peerID).emit(ACTIONS.ICE_CANDIDATE, {
 			peerID: socket.id,
 			iceCandidate,
 		})
@@ -96,5 +100,5 @@ io.on('connection', socket => {
 })
 
 server.listen(PORT, () => {
-	console.log('Server Started!')
+	console.log(`Server is running on port ${PORT}`)
 })
