@@ -1,3 +1,4 @@
+import path from 'path'
 import { io } from 'socket.io-client'
 
 const options = {
@@ -5,8 +6,9 @@ const options = {
 	reconnectionAttempts: 'Infinity', // avoid having user reconnect manually in order to prevent dead clients after a server restart
 	timeout: 10000, // before connect_error and connect_timeout are emitted.
 	transports: ['websocket'],
+	path: '/socket.io',
 }
 
-const socket = io('/socket.io', options)
+const socket = io(options)
 
 export default socket

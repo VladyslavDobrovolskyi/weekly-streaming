@@ -13,8 +13,6 @@ const io = new Server(server, {
 	transports: ['websocket'],
 })
 
-io.of('/socket.io')
-
 const PORT = process.env.PORT || 9999
 
 // Define a io
