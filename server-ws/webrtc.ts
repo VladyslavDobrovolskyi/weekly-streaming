@@ -19,7 +19,11 @@ const PORT = process.env.PORT || 9999
 const namespace = io.of('/socket.io')
 
 function getClientRooms() {
-	const { rooms } = namespace.sockets.adapter
+	const adapter = namespace.sockets.adapter
+	if (!adapter) {
+		return []
+	}
+	const { rooms } = adapter
 	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
 }
 
