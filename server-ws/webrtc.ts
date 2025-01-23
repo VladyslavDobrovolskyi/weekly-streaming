@@ -14,7 +14,7 @@ const io = new Server(server)
 const PORT = process.env.PORT || 9999
 
 // Define a namespace
-const namespace = io.of('/webrtc')
+const namespace = io.of('/socket.io')
 
 function getClientRooms() {
 	const { rooms } = namespace.sockets.adapter

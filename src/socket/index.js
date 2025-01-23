@@ -7,6 +7,6 @@ const options = {
 	transports: ['websocket'],
 }
 
-const socket = io('/webrtc', options)
+const socket = io('/socket.io', options)
 
 export default socket
