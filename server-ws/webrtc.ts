@@ -1,91 +1,100 @@
+import ACTIONS from './actions'
+
 import express from 'express'
 import http from 'http'
-import { Server } from 'socket.io'
-import db from './db/database-connection' // Assuming you're using PostgreSQL
+import socket from 'socket.io'
+import { validate, version } from 'uuid'
 
 const app = express()
 const server = http.createServer(app)
-const io = new Server(server, {
-	cors: {
-		origin: '*',
-	},
-})
+const io = new socket.Server(server)
 
 const PORT = process.env.PORT || 9999
 
-// Namespace '/socket.io'
-const wsNamespace = io.of('/socket.io')
+function getClientRooms() {
+	const { rooms } = io.sockets.adapter
 
-const users: { [key: string]: { roomId: string; username: string } } = {} // Store users by socket ID
-
-wsNamespace.on('connection', socket => {
-	console.log(`(/ws namespace) connect ${socket.id}`)
-
-	socket.on('join', async ({ roomId, username }) => {
-		socket.join(roomId)
-		users[socket.id] = { roomId, username }
-		console.log(`Client ${socket.id} joined room ${roomId}`)
-
-		// Retrieve chat history
-		const chatHistory = await getChatHistory(roomId)
-		socket.emit('chatHistory', chatHistory)
-
-		wsNamespace.to(roomId).emit(
-			'users',
-			Object.values(users).filter(user => user.roomId === roomId)
-		)
-	})
-
-	socket.on('message', async data => {
-		console.log(`Message from ${socket.id} in room ${data.roomId}: ${data.message}`)
-		await saveMessage(data.roomId, users[socket.id].username, data.message)
-		wsNamespace.to(data.roomId).emit('message', { user: users[socket.id].username, message: data.message })
-	})
-
-	socket.on('disconnect', reason => {
-		console.log(`(/ws namespace) disconnect ${socket.id} due to ${reason}`)
-		const { roomId } = users[socket.id]
-		delete users[socket.id]
-		wsNamespace.to(roomId).emit(
-			'users',
-			Object.values(users).filter(user => user.roomId === roomId)
-		)
-	})
-
-	// Handle WebRTC signaling messages
-	socket.on('webrtc-offer', data => {
-		wsNamespace.to(data.to).emit('webrtc-offer', data)
-	})
-
-	socket.on('webrtc-answer', data => {
-		wsNamespace.to(data.to).emit('webrtc-answer', data)
-	})
-
-	socket.on('webrtc-ice-candidate', data => {
-		wsNamespace.to(data.to).emit('webrtc-ice-candidate', data)
-	})
-})
-
-const getChatHistory = async (roomId: string) => {
-	const result = await db.query(
-		'SELECT username, message FROM chat_history WHERE room_id = $1 ORDER BY timestamp ASC',
-		[roomId]
-	)
-	return result.rows
+	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
 }
 
-const saveMessage = async (roomId: string, username: string, message: string) => {
-	await db.query('INSERT INTO chat_history (room_id, username, message, timestamp) VALUES ($1, $2, $3, NOW())', [
-		roomId,
-		username,
-		message,
-	])
+function shareRoomsInfo() {
+	io.emit(ACTIONS.SHARE_ROOMS, {
+		rooms: getClientRooms(),
+	})
 }
 
-app.get('/', (req, res) => {
-	res.send('WebRTC signaling server is running')
+io.on('connection', socket => {
+	shareRoomsInfo()
+
+	socket.on(ACTIONS.JOIN, config => {
+		const { room: roomID } = config
+		const { rooms: joinedRooms } = socket
+
+		if (Array.from(joinedRooms).includes(roomID)) {
+			return console.warn(`Already joined to ${roomID}`)
+		}
+
+		const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || [])
+
+		clients.forEach(clientID => {
+			io.to(clientID).emit(ACTIONS.ADD_PEER, {
+				peerID: socket.id,
+				createOffer: false,
+			})
+
+			socket.emit(ACTIONS.ADD_PEER, {
+				peerID: clientID,
+				createOffer: true,
+			})
+		})
+
+		socket.join(roomID)
+		shareRoomsInfo()
+	})
+
+	function leaveRoom() {
+		const { rooms } = socket
+
+		Array.from(rooms)
+			// LEAVE ONLY CLIENT CREATED ROOM
+			.filter(roomID => validate(roomID) && version(roomID) === 4)
+			.forEach(roomID => {
+				const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || [])
+
+				clients.forEach(clientID => {
+					io.to(clientID).emit(ACTIONS.REMOVE_PEER, {
+						peerID: socket.id,
+					})
+
+					socket.emit(ACTIONS.REMOVE_PEER, {
+						peerID: clientID,
+					})
+				})
+
+				socket.leave(roomID)
+			})
+
+		shareRoomsInfo()
+	}
+
+	socket.on(ACTIONS.LEAVE, leaveRoom)
+	socket.on('disconnecting', leaveRoom)
+
+	socket.on(ACTIONS.RELAY_SDP, ({ peerID, sessionDescription }) => {
+		io.to(peerID).emit(ACTIONS.SESSION_DESCRIPTION, {
+			peerID: socket.id,
+			sessionDescription,
+		})
+	})
+
+	socket.on(ACTIONS.RELAY_ICE, ({ peerID, iceCandidate }) => {
+		io.to(peerID).emit(ACTIONS.ICE_CANDIDATE, {
+			peerID: socket.id,
+			iceCandidate,
+		})
+	})
 })
 
 server.listen(PORT, () => {
-	console.log(`WebRTC signaling server is running on port ${PORT}`)
+	console.log('Server Started!')
 })
