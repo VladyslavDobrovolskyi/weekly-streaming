@@ -9,7 +9,9 @@ import { validate, version } from 'uuid'
 
 const app = express()
 const server = createServer(app)
-const io = new Server(server)
+const io = new Server(server, {
+	transports: ['websocket'],
+})
 
 const PORT = process.env.PORT || 9999
 
