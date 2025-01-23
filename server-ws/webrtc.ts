@@ -23,8 +23,7 @@ function getClientRooms() {
 	if (!adapter) {
 		return []
 	}
-	const rooms = adapter.sockets.adapter?.rooms
-	if (!rooms) {
+	if (!adapter.sockets.adapter.rooms) {
 		return []
 	}
 	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
@@ -38,12 +37,17 @@ function shareRoomsInfo() {
 
 namespace.on('connection', socket => {
 	console.log('New client connected:', socket.id)
+	console.log(namespace)
+	console.loo(namespace.sockets)
+	console.log(namespace.sockets.adapter)
 	shareRoomsInfo()
 
 	socket.on(ACTIONS.JOIN, config => {
+		console.log()
 		const { room: roomID } = config
 		const { rooms: joinedRooms } = socket
-
+		console.log(roomID)
+		console.log(rooms)
 		if (Array.from(joinedRooms).includes(roomID)) {
 			return console.warn(`Already joined to ${roomID}`)
 		}
