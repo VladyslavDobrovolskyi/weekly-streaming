@@ -37,17 +37,17 @@ function shareRoomsInfo() {
 
 namespace.on('connection', socket => {
 	console.log('New client connected:', socket.id)
-	console.log(namespace)
-	console.log(namespace.sockets)
-	console.log(namespace.sockets.adapter)
+	console.log('Namesapce:', namespace)
+	console.log('sockets:', namespace.sockets)
+	console.log('adapter:', namespace.sockets.adapter)
 	shareRoomsInfo()
 
 	socket.on(ACTIONS.JOIN, config => {
-		console.log()
+		console.log('Пользователь заджойнился')
 		const { room: roomID } = config
 		const { rooms: joinedRooms } = socket
-		console.log(roomID)
-		console.log(rooms)
+		console.log('Команата:', roomID)
+		console.log('Komnati:', rooms)
 		if (Array.from(joinedRooms).includes(roomID)) {
 			return console.warn(`Already joined to ${roomID}`)
 		}
