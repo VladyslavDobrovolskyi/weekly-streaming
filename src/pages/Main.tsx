@@ -139,33 +139,6 @@ const Main: React.FC = () => {
 		}
 	}
 
-	;<div ref={rootNode}>
-		<h1>Available Rooms</h1>
-
-		<ul>
-			{rooms.map(roomID => (
-				<li key={roomID}>
-					{roomID}
-					<button
-						onClick={() => {
-							navigate(`/room/${roomID}`)
-						}}
-					>
-						JOIN ROOM
-					</button>
-				</li>
-			))}
-		</ul>
-
-		<button
-			onClick={() => {
-				navigate(`/room/${v4()}`)
-			}}
-		>
-			Create New Room
-		</button>
-	</div>
-
 	if (!isAuthenticated) {
 		return <Login />
 	}
@@ -223,6 +196,32 @@ const Main: React.FC = () => {
 				</button>
 				<button onClick={testGetRooms} style={{ padding: '10px 20px', fontSize: '16px', marginLeft: '10px' }}>
 					Test Get Room Reservations
+				</button>
+			</div>
+			<div ref={rootNode}>
+				<h1>Available Rooms</h1>
+
+				<ul>
+					{rooms.map(roomID => (
+						<li key={roomID}>
+							{roomID}
+							<button
+								onClick={() => {
+									navigate(`/room/${roomID}`)
+								}}
+							>
+								JOIN ROOM
+							</button>
+						</li>
+					))}
+				</ul>
+
+				<button
+					onClick={() => {
+						navigate(`/room/${v4()}`)
+					}}
+				>
+					Create New Room
 				</button>
 			</div>
 		</div>
