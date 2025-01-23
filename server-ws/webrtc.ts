@@ -15,31 +15,25 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 9999
 
-// Define a namespace
-const namespace = io.of('/socket.io')
+// Define a io
 
 function getClientRooms() {
-	const adapter = namespace.sockets.adapter
-	if (!adapter) {
-		return []
-	}
-	if (!adapter.sockets.adapter.rooms) {
-		return []
-	}
+	const { rooms } = io.sockets.adapter
+
 	return Array.from(rooms.keys()).filter(roomID => validate(roomID) && version(roomID) === 4)
 }
 
 function shareRoomsInfo() {
-	namespace.emit(ACTIONS.SHARE_ROOMS, {
+	io.emit(ACTIONS.SHARE_ROOMS, {
 		rooms: getClientRooms(),
 	})
 }
 
-namespace.on('connection', socket => {
+io.on('connection', socket => {
 	console.log('New client connected:', socket.id)
-	console.log('Namesapce:', namespace)
-	console.log('sockets:', namespace.sockets)
-	console.log('adapter:', namespace.sockets.adapter)
+	console.log('Namesapce:', io)
+	console.log('sockets:', io.sockets)
+	console.log('adapter:', io.sockets.adapter)
 	shareRoomsInfo()
 
 	socket.on(ACTIONS.JOIN, config => {
@@ -52,10 +46,10 @@ namespace.on('connection', socket => {
 			return console.warn(`Already joined to ${roomID}`)
 		}
 
-		const clients = Array.from(namespace.sockets.adapter.rooms.get(roomID) || [])
+		const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || [])
 
 		clients.forEach(clientID => {
-			namespace.to(clientID).emit(ACTIONS.ADD_PEER, {
+			io.to(clientID).emit(ACTIONS.ADD_PEER, {
 				peerID: socket.id,
 				createOffer: false,
 			})
@@ -76,10 +70,10 @@ namespace.on('connection', socket => {
 		Array.from(rooms)
 			.filter(roomID => validate(roomID) && version(roomID) === 4)
 			.forEach(roomID => {
-				const clients = Array.from(namespace.sockets.adapter.rooms.get(roomID) || [])
+				const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || [])
 
 				clients.forEach(clientID => {
-					namespace.to(clientID).emit(ACTIONS.REMOVE_PEER, {
+					io.to(clientID).emit(ACTIONS.REMOVE_PEER, {
 						peerID: socket.id,
 					})
 
@@ -98,14 +92,14 @@ namespace.on('connection', socket => {
 	socket.on('disconnecting', leaveRoom)
 
 	socket.on(ACTIONS.RELAY_SDP, ({ peerID, sessionDescription }) => {
-		namespace.to(peerID).emit(ACTIONS.SESSION_DESCRIPTION, {
+		io.to(peerID).emit(ACTIONS.SESSION_DESCRIPTION, {
 			peerID: socket.id,
 			sessionDescription,
 		})
 	})
 
 	socket.on(ACTIONS.RELAY_ICE, ({ peerID, iceCandidate }) => {
-		namespace.to(peerID).emit(ACTIONS.ICE_CANDIDATE, {
+		io.to(peerID).emit(ACTIONS.ICE_CANDIDATE, {
 			peerID: socket.id,
 			iceCandidate,
 		})
