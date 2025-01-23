@@ -43,7 +43,7 @@ io.on('connection', socket => {
 		const { room: roomID } = config
 		const { rooms: joinedRooms } = socket
 		console.log('Команата:', roomID)
-		console.log('Komnati:', rooms)
+		console.log('Komnati:', joinedRooms)
 		if (Array.from(joinedRooms).includes(roomID)) {
 			return console.warn(`Already joined to ${roomID}`)
 		}
