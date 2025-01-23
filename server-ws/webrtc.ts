@@ -1,13 +1,13 @@
 import ACTIONS from './actions'
 
 import express from 'express'
-import http from 'http'
-import socket from 'socket.io'
+import { createServer } from 'http'
+import { Server } from 'socket.io'
 import { validate, version } from 'uuid'
 
 const app = express()
-const server = http.createServer(app)
-const io = new socket.Server(server)
+const server = createServer(app)
+const io = new Server(server)
 
 const PORT = process.env.PORT || 9999
 
