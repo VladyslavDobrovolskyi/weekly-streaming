@@ -38,7 +38,7 @@ function shareRoomsInfo() {
 namespace.on('connection', socket => {
 	console.log('New client connected:', socket.id)
 	console.log(namespace)
-	console.loo(namespace.sockets)
+	console.log(namespace.sockets)
 	console.log(namespace.sockets.adapter)
 	shareRoomsInfo()
 
