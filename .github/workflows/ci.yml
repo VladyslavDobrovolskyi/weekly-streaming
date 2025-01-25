@@ -42,10 +42,8 @@ jobs:
                       git pull
 
                       echo "🛑 Остановка и удаление контейнеров"
-                      cd /home/ubuntu/
-
-                      docker rm -f $(docker ps -aq) || true
                       docker-compose down --volumes
+                      docker container prune -f
                       docker network prune -f
 
                       echo "🛠 Пересборка контейнеров без кэша"
@@ -55,11 +53,9 @@ jobs:
                       docker-compose up -d --force-recreate
 
                       echo " 🗑️ Очистка пространства"
-                      cd .. 
+                      cd ..
                       rm -rf weekly-streaming
                       echo "📝 Проверка запущенных контейнеров"
                       docker ps -a
-
-
 
                       echo "✅ Деплой завершен успешно!"
