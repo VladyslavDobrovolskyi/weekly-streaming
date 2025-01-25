@@ -20,7 +20,7 @@ router.delete('/', authMiddleware, deleteRoomReservationHandler)
 //@ts-expect-error ts-typnyak
 router.get('/:roomId/users', authMiddleware, getUsersInRoomHandler)
 //@ts-expect-error ts-typnyak
-router.get('/user', authMiddleware, getRoomByUser) // New route to get room by user ID
+router.get('/user', authMiddleware, getRoomByUser) // New route to get room by User ID
 //@ts-expect-error ts-typnyak
 router.get('/room', authMiddleware, getRoomData)
 export default router
