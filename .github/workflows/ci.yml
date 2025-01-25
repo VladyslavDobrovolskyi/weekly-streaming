@@ -32,7 +32,7 @@ jobs:
                   port: ${{ secrets.PORT }}
                   script: |
                       cd /home/ubuntu/
-                    
+
                       echo "🔄 Cтягиваем код с github"
                       git clone git@github.com:VladyslavDobrovolskyi/weekly-streaming.git
 
@@ -42,6 +42,8 @@ jobs:
                       git pull
 
                       echo "🛑 Остановка и удаление контейнеров"
+                      cd /home/ubuntu/
+
                       docker rm -f $(docker ps -aq) || true
                       docker-compose down --volumes
                       docker network prune -f
@@ -51,13 +53,13 @@ jobs:
 
                       echo "🚀 Запуск контейнеров"
                       docker-compose up -d --force-recreate
-                     
+
                       echo " 🗑️ Очистка пространства"
                       cd .. 
                       rm -rf weekly-streaming
                       echo "📝 Проверка запущенных контейнеров"
                       docker ps -a
 
-                      
+
 
                       echo "✅ Деплой завершен успешно!"
